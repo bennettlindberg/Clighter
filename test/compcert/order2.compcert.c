@@ -49,10 +49,8 @@ extern int printf(signed char *, ...);
 int main(void)
 {
   int a;
-  int b;
-  a = 100;
-  b = 200;
-  printf(__stringlit_1, b++ + a);
+  a = 0;
+  printf(__stringlit_1, a++ + a);
   return 0;
   return 0;
 }

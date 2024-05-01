@@ -25,13 +25,11 @@ signed char const __stringlit_1[4] = "%d\012";
 int main(void)
 {
   int a;
-  int b;
-  register int $87;
-  a = 100;
-  b = 200;
-  $87 = b;
-  b = $87 + 1;
-  printf(__stringlit_1, $87 + a);
+  register int $61;
+  a = 0;
+  $61 = a;
+  a = $61 + 1;
+  printf(__stringlit_1, $61 + a);
   return 0;
   return 0;
 }

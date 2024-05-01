@@ -5,10 +5,8 @@ extern int printf(char const * restrict __format, ...);
 int main(void)
 {
   int a;
-  int b;
-  a = 100;
-  b = 200;
-  printf("%d\n", b++ + a);
+  a = 0;
+  printf("%d\n", a++ + a);
   return 0;
   return 0;
 }

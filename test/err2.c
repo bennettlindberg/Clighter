@@ -28,10 +28,10 @@ int main() {
   my_union u = my_func();
 
   if (u.s1.a != 100.f)
-    printf("a ooops");
+    printf("a oops\n");
 
   if (u.s1.b != 200.f)
-    printf("b ooops");
+    printf("b oops\n");
 
   return 0;
 }
