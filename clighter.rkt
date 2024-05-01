@@ -18,7 +18,7 @@
                   (function τ τ ...)
                   (struct id φ ...)
                   (union id φ ...)
-                  (comppointer id))
+                  (comp-pointer id))
   (φ          ::= (id τ))
 
   ;;; Exprs
@@ -43,7 +43,7 @@
                   (= a a)
                   (= a (a a ...))
                   (a a ...)
-                  (s ...)
+                  (s s)
                   (if a s1 s2)
                   (switch a sw)
                   (while a s)
@@ -61,4 +61,41 @@
   (Fe         ::= (extern τ id dcl ...))
   (Fd         ::= F Fe)
   (P          ::= (dcl ... Fd ...)) ; main = id
+
+  ;;; Semantic Elements
+  (b          ::= natural)
+  (δ          ::= natural)
+  (l          ::= (b δ))
+  (v          ::= (int n)
+                  (float f)
+                  (ptr l)
+                  undef)
+  (out        ::= Normal
+                  Continue
+                  Break
+                  Return
+                  (Return v))
+  (G          ::= (id↦b ... b↦Fd ...))
+  (E          ::= (id↦b ...))
+  (id↦b       ::= (id b))
+  (b↦Fd       ::= (b Fd))
+  (M          ::= (b↦δ↦v ...))
+  (b↦δ↦v      ::= (b δ↦v))
+  (δ↦v        ::= (δ v))
+  (κ          ::= int8signed
+                  int8unsigned
+                  int16signed
+                  int16unsigned
+                  int32
+                  float32
+                  float64)
+  (io-v       ::= (int n)
+                  (float f))
+  (io-e       ::= (id io-v ... io-v))
+  (t          ::= ε
+                  (io-e t))
+  (T          ::= ε
+                  (io-e T))
+  (B          ::= (terminates t n)
+                  (diverges T))
 )
