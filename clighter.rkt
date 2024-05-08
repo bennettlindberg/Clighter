@@ -53,18 +53,24 @@
   (Fd         ::= F Fe)
   (P          ::= (dcl ... Fd ...)) ; main = id
 
-  ; Semantic Elements
+  ; Locations
   (b          ::= natural)
   (δ          ::= natural)
   (l          ::= (b δ))
+
+  ; Values
   (v          ::= (int n)
                   (ptr l)
                   undef)
+
+  ; Outcomes
   (out        ::= Normal
                   Continue
                   Break
                   Return
                   (Return v))
+
+  ; Environments
   (G          ::= (id↦b ... b↦Fd ...))
   (E          ::= (id↦b ...))
   (id↦b       ::= (id b))
@@ -72,21 +78,19 @@
   (M          ::= (b↦δ↦v ...))
   (b↦δ↦v      ::= (b δ↦v))
   (δ↦v        ::= (δ v))
+
+  ; Traces and Program Results
   (io-v       ::= (int n))
   (io-e       ::= (id io-v ... io-v))
-  (t          ::= hole
-                  (io-e t))
-  (T          ::= hole
-                  (io-e T))
+  (t          ::= (io-e ...))
   (B          ::= (terminates t n)
-                  (diverges T))
+                  (diverges t))
 )
 (default-language Clighter)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DEFINE META-FUNCTION HELPERS ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; in-E-domain? : E id -> boolean
 ; Returns true if identifier "id" is in local environment "E"
 (define-metafunction Clighter
@@ -220,6 +224,15 @@
   [(convert-out-to-return Return(v) τ) v]
   [(convert-out-to-return out τ) ,(raise "attempted illegal function return")])
 
+; concat-trace : t t -> t
+; Returns the concatenation of two traces, with "t_1" before "t_2"
+(define-metafunction Clighter
+  concat-trace : t t -> t
+  [(concat-trace (io-e io-e_1 ...) (io-e_2 ...))
+   (concat-trace (io-e_1 ...) (io-e io-e_2 ...))]
+  [(concat-trace () (io-e_2 ...))
+   (io-e_2 ...)])
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; JUDGEMENT : EXPRESSIONS IN L-VALUE POSITION ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -230,13 +243,13 @@
   ; fetch location of variable "id" in local environment "E"
   [
    --------------------------------------------- "1a"
-   (lval G (id↦b ... (id b) id↦b ...) M id
+   (lval G (id↦b_1 ... (id b) id↦b_2 ...) M id
          (b 0))]
 
   ; fetch location of variable "id" in global environment "G"
   [(side-condition ,(not (term (in-E-domain? E id))))
    --------------------------------------------- "1b"
-   (lval (id↦b ... (id b) id↦b ... b↦Fd ...) E M id
+   (lval (id↦b_1 ... (id b) id↦b_2 ... b↦Fd ...) E M id
          (b 0))]
 
   ; extract location from a pointer expression "a"
@@ -350,28 +363,28 @@
   [
    --------------------------------------------- "15"
    (stmt G E M skip
-         hole Normal M)]
+         () Normal M)]
 
   ; evaluate "break" statement
   ; (NOTE: continuation behavior handled by enclosing loop)
   [
    --------------------------------------------- "16"
    (stmt G E M break
-         hole Break M)]
+         () Break M)]
 
   ; evaluate "continue" statement
   ; (NOTE: continuation behavior handled by enclosing loop)
   [
    --------------------------------------------- "17"
    (stmt G E M continue
-         hole Continue M)]
+         () Continue M)]
 
   ; evaluate empty "return" statement
   ; (NOTE: continuation behavior handled by enclosing loop and function)
   [
    --------------------------------------------- "18"
    (stmt G E M return
-         hole Return M)]
+         () Return M)]
 
   ; evaluate valued "(return a)" statement
   ; (NOTE: continuation behavior handled by enclosing loop and function)
@@ -379,7 +392,7 @@
          v)
    --------------------------------------------- "19"
    (stmt G E M (return a)
-         hole (Return v) M)]
+         () (Return v) M)]
 
   ; evaluate assignment between expressions
   ; (NOTE: types of expressions "a_1" and "a_2" are assumed to match)
@@ -389,7 +402,7 @@
          v)
    --------------------------------------------- "20"
    (stmt G E M (= a_1 a_2)
-         hole Normal (storeval (type a_1) M l v))]
+         () Normal (storeval (type a_1) M l v))]
 
   ; evaluate sequence of expressions where statement one finishes "Normal"
   [(stmt G E M s_1
@@ -398,7 +411,7 @@
          t_2 out M_2) 
    --------------------------------------------- "21"
    (stmt G E M (s_1 s_2)
-         (in-hole t_1 t_2) out M_2)]
+         (concat-trace t_1 t_2) out M_2)]
 
    ; evaluate sequence of expressions where statement one finishes non-"Normal"
   [(stmt G E M s_1
@@ -421,7 +434,7 @@
    (side-condition (is_false v (type a)))
    --------------------------------------------- "23"
    (loop G E M (while a s)
-         hole Normal M)]
+         () Normal M)]
 
   ; exit while loop when "break" or "return" statement encountered
   ; (NOTE: continue and normal not checked here - handled in following two rules)
@@ -444,7 +457,7 @@
          t_2 out M_2)
    --------------------------------------------- "25a"
    (loop G E M (while a s)
-         (in-hole t_1 t_2) out M_2)]
+         (concat-trace t_1 t_2) out M_2)]
 
   ; continue to next while loop iteration when "continue" statement encountered
   [(rval G E M a
@@ -456,7 +469,7 @@
          t_2 out M_2)
    --------------------------------------------- "25b"
    (loop G E M (while a s)
-         (in-hole t_1 t_2) out M_2)]
+         (concat-trace t_1 t_2) out M_2)]
 
   ; continue to first for loop iteration after evaluation of loop initializer
   [(stmt G E M s_init
@@ -466,7 +479,7 @@
          t_2 out M_2)
    --------------------------------------------- "26"
    (loop G E M (for s_init a s_incr s_body)
-         (in-hole t_1 t_2) out M_2)]
+         (concat-trace t_1 t_2) out M_2)]
 
   ; exit for loop when condition "a" is false
   [(rval G E M a
@@ -474,7 +487,7 @@
    (side-condition (is_false v (type a)))
    --------------------------------------------- "27"
    (loop G E M (for skip a s_incr s_body)
-         hole Normal M)]
+         () Normal M)]
 
   ; exit for loop when "break" or "return" statement encountered
   ; (NOTE: continue and normal not checked here - handled in following two rules)
@@ -499,7 +512,7 @@
          t_3 out M_3)
    --------------------------------------------- "29a"
    (loop G E M (for skip a s_incr s_body)
-         (in-hole t_1 (in-hole t_2 t_3)) out M_3)]
+         (concat-trace t_1 (concat-trace t_2 t_3)) out M_3)]
 
   ; continue to next for loop iteration when "continue" statement encountered
   [(rval G E M a
@@ -513,7 +526,7 @@
          t_3 out M_3)
    --------------------------------------------- "29b"
    (loop G E M (for skip a s_2 s_3)
-         (in-hole t_1 (in-hole t_2 t_3)) out M_3)])
+         (concat-trace t_1 (concat-trace t_2 t_3)) out M_3)])
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ;; JUDGEMENT : FUNCTION CALLS ;;
