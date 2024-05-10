@@ -290,7 +290,7 @@
          (b δ))
    --------------------------------------------- "3"
    (lval G M ((@ (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
-         (b (field-offset id_field (φ_1 ... (id_field τ) φ_2 ...) 0)))]
+         (b (field-offset id_field (φ_1 ... (id_field τ) φ_2 ...) δ)))]
 
   ; fetch location of field "id" in union expression "a"
   ; (NOTE: union fields do not have offsets)
