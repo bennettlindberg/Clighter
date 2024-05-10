@@ -254,15 +254,12 @@
   [(is-not-skip? skip) ,#f]
   [(is-not-skip? s) ,#t])
 
-; convert-out-to-return : out τ -> v
+; convert-out-to-return : out -> v
 ; Returns the return value associated with the outcome "out"
 (define-metafunction Clighter
-  convert-out-to-return : out τ -> v
-  [(convert-out-to-return Normal void) undef]
-  [(convert-out-to-return Return void) undef]
-  [(convert-out-to-return Return(v) void) ,(raise "attempted to return value from void function")]
-  [(convert-out-to-return Return(v) τ) v]
-  [(convert-out-to-return out τ) ,(raise "attempted illegal function return")])
+  convert-out-to-return : out -> v
+  [(convert-out-to-return Return(v)) v]
+  [(convert-out-to-return out) undef])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; JUDGEMENT : EXPRESSIONS IN L-VALUE POSITION ;;
@@ -548,12 +545,12 @@
 ;; JUDGEMENT : ENTIRE PROGRAMS ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-judgment-form Clighter
-  #:mode (prog I O)
-  #:contract (prog P M)
+  #:mode (prog I O O)
+  #:contract (prog P v M)
 
   ; evaluate entire program
   [(stmt (get-G (init () () (dcl ...))) (get-M (init () () (dcl ...))) s
          out M)
    --------------------------------------------- "40"
    (prog (dcl ... s)
-         M)])
+         (convert-out-to-return out) M)])
