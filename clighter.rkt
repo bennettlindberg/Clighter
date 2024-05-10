@@ -21,6 +21,7 @@
   (a+τ        ::= (a τ))
   (a          ::= id
                   n
+                  (sizeof a+τ)
                   (uop a+τ)
                   (bop a+τ a+τ)
                   (* a+τ)
@@ -84,21 +85,25 @@
 ; Returns the size of the type "τ"
 (define-metafunction Clighter
   size-of : τ -> natural
-  [(size-of int) ,1]
+  [(size-of int) ,4]
   [(size-of void) ,(raise "attempted to get size of void type")]
   [(size-of (array τ n)) ,(term n)]
-  [(size-of (pointer τ)) ,1]
+  [(size-of (pointer τ)) ,8]
   [(size-of (struct id_struct (id_field τ) φ ...)) ,(+ (term (size-of τ)) (term (size-of (struct id_struct φ ...))))]
   [(size-of (struct id_struct)) ,0]
   [(size-of (union id_union (id_field τ) φ ...)) ,(max (term (size-of τ)) (term (size-of (union id_union φ ...))))]
   [(size-of (union id_union)) ,0])
 
-; TODO: COUNT USING SIZE-OF TO FIND FIELD OFFSET!
-; field-offset : id a -> δ
-; Returns the "δ" field offset of field "id" in the struct at block "b" in memory state "M"
+; field-offset : id (φ ...) δ -> δ
+; Returns the field offset of field "id" in the struct at block "b" in memory state "M"
 (define-metafunction Clighter
-  field-offset : id (φ ...) M b -> δ
-  [(field-offset id (φ ...) M b) 0])
+  field-offset : id (φ ...) δ -> δ
+  [(field-offset id_target ((id_field τ) φ ...) δ)
+   (field-offset id_target (φ ...) (term ,(+ (term δ) (term (size-of τ)))))]
+  [(field-offset id_target ((id_target τ) φ ...) δ)
+   δ]
+  [(field-offset id_target () δ)
+   ,(raise "attempted to find field offset of non-existent struct field")])
 
 ; get-last-block : M -> b
 ; Returns the next block unallocated in the memory state "M"
@@ -285,7 +290,7 @@
          (b δ))
    --------------------------------------------- "3"
    (lval G M ((@ (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
-         (b (field-offset id_field M b)))]
+         (b (field-offset id_field (φ_1 ... (id_field τ) φ_2 ...) 0)))]
 
   ; fetch location of field "id" in union expression "a"
   ; (NOTE: union fields do not have offsets)
@@ -311,7 +316,11 @@
 
   ; inference rule 6 removed - no floating point values
 
-  ; inference rule 7 removed - no differing type sizes
+  ; compute size of the type "τ" of expression "a"
+  [
+   --------------------------------------------- "7"
+   (rval G M (sizeof (a τ))
+         (int (size-of τ)))]
 
   ; fetch value from location of expression "a"
   [(lval G M (a τ)
@@ -543,6 +552,8 @@
   #:contract (prog P M)
 
   ; evaluate entire program
-  [(stmt (get-G (init () () (dcl ...))) (get-M (init () () (dcl ...))) s out M)
+  [(stmt (get-G (init () () (dcl ...))) (get-M (init () () (dcl ...))) s
+         out M)
    --------------------------------------------- "40"
-   (prog (dcl ... s) M)])
+   (prog (dcl ... s)
+         M)])
