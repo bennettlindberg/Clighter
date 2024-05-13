@@ -1,6 +1,7 @@
 #lang racket
 
 (require redex)
+(provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DEFINE LANGUAGE SYNTAX ;;
@@ -36,10 +37,8 @@
   ; Statements
   (s          ::= skip
                   (= a+τ a+τ)
-                  (= a+τ (a+τ a+τ ...))
-                  (a+τ a+τ ...)
                   (s s)
-                  (if a s1 s2)
+                  (if a+τ s s)
                   (while a+τ s)
                   (for s a+τ s s)
                   break
@@ -87,7 +86,7 @@
   size-of : τ -> natural
   [(size-of int) ,4]
   [(size-of void) ,(raise "attempted to get size of void type")]
-  [(size-of (array τ n)) ,(term n)]
+  [(size-of (array τ n)) ,(* (term (size-of τ)) (term n))]
   [(size-of (pointer τ)) ,8]
   [(size-of (struct id_struct (id_field τ) φ ...)) ,(+ (term (size-of τ)) (term (size-of (struct id_struct φ ...))))]
   [(size-of (struct id_struct)) ,0]
@@ -258,7 +257,7 @@
 ; Returns the return value associated with the outcome "out"
 (define-metafunction Clighter
   convert-out-to-return : out -> v
-  [(convert-out-to-return Return(v)) v]
+  [(convert-out-to-return (Return v)) v]
   [(convert-out-to-return out) undef])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
