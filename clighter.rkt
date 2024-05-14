@@ -85,7 +85,7 @@
 (define-metafunction Clighter
   size-of : τ -> natural
   [(size-of int) ,4]
-  [(size-of void) ,(raise "attempted to get size of void type")]
+  [(size-of void) ,(raise-argument-error 'size-of "attempted to get size of void type" (term τ))]
   [(size-of (array τ n)) ,(* (term (size-of τ)) (term n))]
   [(size-of (pointer τ)) ,8]
   [(size-of (struct id_struct (id_field τ) φ ...)) ,(+ (term (size-of τ)) (term (size-of (struct id_struct φ ...))))]
@@ -102,18 +102,19 @@
   [(field-offset id_target ((id_target τ) φ ...) δ)
    δ]
   [(field-offset id_target () δ)
-   ,(raise "attempted to find field offset of non-existent struct field")])
+   ,(raise-argument-error 'field-offset "field id that exists within the struct" (term id))])
 
-; get-last-block : M -> b
-; Returns the next block unallocated in the memory state "M"
+; get-next-block : M -> b
+; Returns the last allocated block in the memory state "M"
 (define-metafunction Clighter
-  get-last-block : M -> b
-  [(get-last-block ())
+  get-next-block : M -> b
+  [(get-next-block ())
    0]
-  [(get-last-block ((b δ↦v) b↦δ↦v ...))
-   ,(max (term b) (term (get-next-block (b↦δ↦v ...))))])
+  [(get-next-block ((b δ↦v) b↦δ↦v ...))
+   ,(max (term ,(+ 1 (term b))) (term (get-next-block (b↦δ↦v ...))))])
 
 ; init-struct-fields : b↦δ↦v δ (φ ...) -> b↦δ↦v
+; Initializes a struct by creating δ↦v pairs in block "b" for each field of the struct
 (define-metafunction Clighter
   init-struct-fields : b↦δ↦v δ (φ ...) -> b↦δ↦v
   [(init-struct-fields (b δ↦v ...) δ ((id τ) φ ...))
@@ -121,14 +122,41 @@
   [(init-struct-fields b↦δ↦v δ ())
    b↦δ↦v])
 
+; init-array : b↦δ↦v δ τ n -> b↦δ↦v
+; Initializes an array by creating "n" δ↦v pairs in block "b"
+(define-metafunction Clighter
+  init-array : b↦δ↦v δ τ n -> b↦δ↦v
+  [(init-array (b δ↦v ...) δ τ n)
+   (init-array (b (δ undef) δ↦v ...) ,(+ (term δ) (term (size-of τ))) τ ,(- (term n) 1))]
+  [(init-array (b δ↦v ...) δ τ 0)
+   (b δ↦v ...)])
+
 ; init : G M (dcl ...) -> (G M)
 ; Returns the initial variable environment "G" and memory state "M" provided program declarations "dcl ..."
 (define-metafunction Clighter
   init : G M (dcl ...) -> (G M)
-  [(init (id↦b ...) (b↦δ↦v ...) ((id (struct id_struct φ ...)) dcl ...))
-   (init ((id (term ,(+ 1 (term (get-last-block (b↦δ↦v ...)))))) id↦b ...) ((init-struct-fields ((term ,(+ 1 (term (get-last-block (b↦δ↦v ...)))))) 0 (φ ...)) b↦δ↦v ...) (dcl ...))]
-  [(init (id↦b ...) (b↦δ↦v ...) ((id τ) dcl ...))
-   (init ((id (term ,(+ 1 (term (get-last-block (b↦δ↦v ...)))))) id↦b ...) (((term ,(+ 1 (term (get-last-block (b↦δ↦v ...))))) (0 undef)) b↦δ↦v ...) (dcl ...))]
+  ; struct
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         ((id (struct id_struct φ ...)) dcl ...))
+   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
+         ((init-struct-fields ((get-next-block (b↦δ↦v ...))) 0 (φ ...)) b↦δ↦v ...)
+         (dcl ...))]
+  ; array
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         ((id (array τ n)) dcl ...))
+   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
+         ((init-array ((get-next-block (b↦δ↦v ...))) 0 τ n) b↦δ↦v ...)
+         (dcl ...))]
+  ; int, void, pointer, and union
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         ((id τ) dcl ...))
+   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
+         (((get-next-block (b↦δ↦v ...)) (0 undef)) b↦δ↦v ...)
+         (dcl ...))]
+  ; base case
   [(init G M ())
    (G M)])
 
@@ -152,18 +180,18 @@
   [(loadval int (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v) δ↦v_2 ...) b↦δ↦v_2 ...) (b δ))
    v]
   [(loadval void (b↦δ↦v ...) (b δ))
-   ,(raise "attempted loadval with void")]
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
   [(loadval (array τ n) (b↦δ↦v ...) (b δ))
    (ptr (b δ))]
   [(loadval (pointer τ) (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v) δ↦v_2 ...) b↦δ↦v_2 ...) (b δ))
    v]
   [(loadval (struct id φ ...) (b↦δ↦v ...) (b δ))
-   ,(raise "attempted loadval with struct")]
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
   [(loadval (union id φ ...) (b↦δ↦v ...) (b δ))
-   ,(raise "attempted loadval with union")])
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))])
 
 ; storeval : τ M l v -> M
-; Returns ; The type "τ" is used tthe memory state "M" after placing value "v" at location "l"
+; Returns the memory state "M" after storing the value "v" at location "l"
 ; The type "τ" is used to determine if the value is legal to store
 (define-metafunction Clighter
   storeval : τ M l v -> M
@@ -172,7 +200,7 @@
   [(storeval (pointer τ) (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v) δ↦v_2 ...) b↦δ↦v_2 ...) (b δ) v_new)
    (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v_new) δ↦v_2 ...) b↦δ↦v_2 ...)]
   [(storeval τ M l v)
-   ,(raise "attempted illegal storeval")])
+   ,(raise-argument-error 'storeval "int or pointer" (term τ))])
 
 ; eval-unop : uop v τ -> v
 ; Returns the evaluation of the unary operation "uop" on input "v"
@@ -184,7 +212,7 @@
   [(eval-unop ~ (int n) int) (int ,(bitwise-not (term n)))]
   [(eval-unop ! (int n) int) (int ,(if (equal? 0 (term n)) 1 0))]
   ; else
-  [(eval-unop uop v τ) ,(raise "attempted illegal unary operation")])
+  [(eval-unop uop v τ) ,(raise-argument-error 'eval-unop "(int n)" (term τ))])
 
 ; eval-binop : bop v τ v τ -> v
 ; Returns the evaluation of the binary operation "bop" on inputs "v"
@@ -203,32 +231,39 @@
   [(eval-binop & (int n_1) int (int n_2) int) (int ,(bitwise-and (term n_1) (term n_2)))]
   [(eval-binop \| (int n_1) int (int n_2) int) (int ,(bitwise-ior (term n_1) (term n_2)))]
   [(eval-binop ^ (int n_1) int (int n_2) int) (int ,(bitwise-xor (term n_1) (term n_2)))]
-  ; itn - relational
-  [(eval-binop < (int n_1) int (int n_2) int) (int ,(< (term n_1) (term n_2)))]
-  [(eval-binop <= (int n_1) int (int n_2) int) (int ,(<= (term n_1) (term n_2)))]
-  [(eval-binop > (int n_1) int (int n_2) int) (int ,(> (term n_1) (term n_2)))]
-  [(eval-binop >= (int n_1) int (int n_2) int) (int ,(>= (term n_1) (term n_2)))]
-  [(eval-binop == (int n_1) int (int n_2) int) (int ,(equal? (term n_1) (term n_2)))]
-  [(eval-binop != (int n_1) int (int n_2) int) (int ,(not (equal? (term n_1) (term n_2))))]
+  ; int - relational
+  [(eval-binop < (int n_1) int (int n_2) int) (int ,(boolean-to-int (< (term n_1) (term n_2))))]
+  [(eval-binop <= (int n_1) int (int n_2) int) (int ,(boolean-to-int (<= (term n_1) (term n_2))))]
+  [(eval-binop > (int n_1) int (int n_2) int) (int ,(boolean-to-int (> (term n_1) (term n_2))))]
+  [(eval-binop >= (int n_1) int (int n_2) int) (int ,(boolean-to-int (>= (term n_1) (term n_2))))]
+  [(eval-binop == (int n_1) int (int n_2) int) (int ,(boolean-to-int (equal? (term n_1) (term n_2))))]
+  [(eval-binop != (int n_1) int (int n_2) int) (int ,(boolean-to-int (not (equal? (term n_1) (term n_2)))))]
   ; pointer - arithmetic
   [(eval-binop + (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(+ (term δ) (term n))))]
   [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (term n))))]
   ; else
-  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise "attempted illegal binary operation")])
+  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term τ))])
 
-; is_true : v τ -> boolean
+; boolean-to-int
+; Returns the integer representation of a boolean value
+(define (boolean-to-int b)
+  (if (equal? #true b)
+      1
+      0))
+
+; is-true : v τ -> boolean
 ; Returns the logical "truthiness" of input "v" based on its type "τ"
 (define-metafunction Clighter
-  is_true : v τ -> boolean
-  [(is_true v (pointer τ)) ,#t]
-  [(is_true (int n) int) ,(not (equal? (term n) 0))])
+  is-true : v τ -> boolean
+  [(is-true v (pointer τ)) ,#t]
+  [(is-true (int n) int) ,(not (equal? (term n) 0))])
 
-; is_false : v τ -> boolean
+; is-false : v τ -> boolean
 ; Returns the logical "falsiness" of input "v" based on its type "τ"
 (define-metafunction Clighter
-  is_false : v τ -> boolean
-  [(is_false v (pointer τ)) ,#f]
-  [(is_false (int n) int) ,(equal? (term n) 0)])
+  is-false : v τ -> boolean
+  [(is-false v (pointer τ)) ,#f]
+  [(is-false (int n) int) ,(equal? (term n) 0)])
 
 ; loop-exit-out-update : out -> out
 ; Returns the updated outcome "out" post exit of a loop
@@ -237,14 +272,14 @@
   [(loop-exit-out-update Break) Normal]
   [(loop-exit-out-update Return) Return]
   [(loop-exit-out-update (Return v)) (Return v)]
-  [(loop-exit-out-update out) ,(raise "encountered invalid outcome update on loop exit")])
+  [(loop-exit-out-update out) ,(raise-argument-error 'loop-exit-out-update "Break, Return, or (Return v)" (term out))])
 
 ; is-not-normal? : out -> boolean
 ; Returns true if the outcome "out" is not "Normal"
 (define-metafunction Clighter
   is-not-normal? : out -> boolean
   [(is-not-normal? Normal) ,#f]
-  [(is-not-normal? out) #,t])
+  [(is-not-normal? out) ,#t])
 
 ; is-not-skip? : s -> boolean
 ; Returns true if the statement "s" is not "skip"
@@ -351,7 +386,7 @@
   ; evaluate ternary conditional operator in "a_cond" true case
   [(rval G M (a_cond τ_cond)
          v_cond)
-   (side-condition (is_true v_cond τ_cond))
+   (side-condition (is-true v_cond τ_cond))
    (rval G M a+τ_true
          v_true)
    --------------------------------------------- "12"
@@ -361,7 +396,7 @@
   ; evaluate ternary conditional operator in "a_cond" false case
   [(rval G M (a_cond τ_cond)
          v_cond)
-   (side-condition (is_false v_cond τ_cond))
+   (side-condition (is-false v_cond τ_cond))
    (rval G M a+τ_false
          v_false)
    --------------------------------------------- "13"
@@ -440,10 +475,30 @@
    (stmt G M (s_1 s_2)
          out M_1)]
 
+  ; evaluate if statement in "a_cond" true case
+  [(rval G M (a_cond τ_cond)
+         v_cond)
+   (side-condition (is-true v_cond τ_cond))
+   (stmt G M s_true
+         out M_1)
+   --------------------------------------------- "if-true"
+   (stmt G M (if (a_cond τ_cond) s_true s_false)
+         out M_1)]
+
+  ; evaluate if statement in "a_cond" false case
+  [(rval G M (a_cond τ_cond)
+         v_cond)
+   (side-condition (is-false v_cond τ_cond))
+   (stmt G M s_false
+         out M_1)
+   --------------------------------------------- "if-false"
+   (stmt G M (if (a_cond τ_cond) s_true s_false)
+         out M_1)]
+
   ; exit while loop when condition "a" is false
   [(rval G M (a τ)
          v)
-   (side-condition (is_false v τ))
+   (side-condition (is-false v τ))
    --------------------------------------------- "23"
    (stmt G M (while (a τ) s)
          Normal M)]
@@ -452,7 +507,7 @@
   ; (NOTE: continue and normal not checked here - handled in following two rules)
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s
          out M_1)
    --------------------------------------------- "24"
@@ -462,7 +517,7 @@
   ; continue to next while loop iteration under "Normal" behavior
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s
          Normal M_1)
    (stmt G M_1 (while (a τ) s)
@@ -474,7 +529,7 @@
   ; continue to next while loop iteration when "continue" statement encountered
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s
          Continue M_1)
    (stmt G M_1 (while (a τ) s)
@@ -496,7 +551,7 @@
   ; exit for loop when condition "a" is false
   [(rval G M (a τ)
          v)
-   (side-condition (is_false v τ))
+   (side-condition (is-false v τ))
    --------------------------------------------- "27"
    (stmt G M (for skip (a τ) s_incr s_body)
          Normal M)]
@@ -505,7 +560,7 @@
   ; (NOTE: continue and normal not checked here - handled in following two rules)
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s_body
          out M_1)
    --------------------------------------------- "28"
@@ -515,7 +570,7 @@
   ; continue to next for loop iteration under "Normal" behavior
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s_body
          Normal M_1)
    (stmt G M_1 s_incr
@@ -529,7 +584,7 @@
   ; continue to next for loop iteration when "continue" statement encountered
   [(rval G M (a τ)
          v)
-   (side-condition (is_true v τ))
+   (side-condition (is-true v τ))
    (stmt G M s_3
          Continue M_1)
    (stmt G M_1 s_2
