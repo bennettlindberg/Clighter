@@ -163,34 +163,288 @@
 ;; TEST HELPER META-FUNCTIONS ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; size-of
-
-
-
+(test-equal?
+ "size-of int"
+ (term (size-of int))
+ (term 4))
+(test-equal?
+ "size-of array"
+ (term (size-of (array int 60)))
+ (term 240))
+(test-equal?
+ "size-of array"
+ (term (size-of (array (pointer int) 10)))
+ (term 80))
+(test-equal?
+ "size-of array"
+ (term (size-of (array (struct abc (xyz int) (hjk int)) 20)))
+ (term 160))
+(test-equal?
+ "size-of pointer"
+ (term (size-of (pointer int)))
+ (term 8))
+(test-equal?
+ "size-of pointer"
+ (term (size-of (pointer (array (pointer int) 10))))
+ (term 8))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa)))
+ (term 0))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa (bbb int))))
+ (term 4))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa (bbb int) (ccc (pointer int)))))
+ (term 12))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa (bbb int) (ddd (array int 10)) (ccc (pointer int)))))
+ (term 52))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa (bbb int) (eee (struct hjk)) (ddd (array int 10)) (ccc (pointer int)))))
+ (term 52))
+(test-equal?
+ "size-of struct"
+ (term (size-of (struct aaa (bbb int) (eee (struct hjk (lll int))) (ddd (array int 10)) (ccc (pointer int)))))
+ (term 56))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa)))
+ (term 0))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa (bbb int))))
+ (term 4))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa (bbb int) (ccc (pointer int)))))
+ (term 8))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa (bbb int) (ddd (array int 10)) (ccc (pointer int)))))
+ (term 40))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa (bbb int) (eee (struct hjk)) (ddd (array int 10)) (ccc (pointer int)))))
+ (term 40))
+(test-equal?
+ "size-of union"
+ (term (size-of (union aaa (bbb int) (eee (struct hjk (lll (pointer int)) (mmm int))) (ccc (pointer int)))))
+ (term 12))
+(test-exn
+ "size-of void"
+ exn:fail?
+ (λ () (term (size-of void))))
 
 ; field-offset
-
-
-
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset aaa ((aaa int)) 0))
+ (term 0))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset aaa ((aaa int) (bbb int)) 0))
+ (term 0))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset bbb ((aaa int) (bbb int)) 0))
+ (term 4))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset ccc ((aaa int) (bbb (pointer int)) (ccc int)) 0))
+ (term 12))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset bbb ((aaa int) (bbb (pointer int)) (ccc int)) 0))
+ (term 4))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset bbb ((aaa (struct hjk)) (bbb (pointer int)) (ccc int)) 0))
+ (term 0))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset ccc ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc int)) 0))
+ (term 16))
+(test-equal?
+ "field-offset existing id"
+ (term (field-offset ddd ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc (array (pointer int) 10)) (ddd int)) 0))
+ (term 96))
+(test-equal?
+ "field-offset existing id non-zero initial offset"
+ (term (field-offset ccc ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc int)) 24))
+ (term 40))
+(test-equal?
+ "field-offset existing id non-zero initial offset"
+ (term (field-offset ddd ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc (array (pointer int) 10)) (ddd int)) 100))
+ (term 196))
+(test-exn
+ "field-offset non-existing id"
+ exn:fail?
+ (λ () (term (field-offset abc ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc int)) 0))))
+(test-exn
+ "field-offset non-existing id"
+ exn:fail?
+ (λ () (term (field-offset abc () 0))))
 
 ; get-next-block
-
-
-
+(test-equal?
+ "get-next-block empty memory"
+ (term (get-next-block ()))
+ (term 0))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1))))
+ (term 2))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1) (2) (3))))
+ (term 4))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1) (2) (3) (8))))
+ (term 9))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1) (2) (3) (8) (7) (6) (4))))
+ (term 9))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1 (0 undef) (1 undef) (2 undef)) (2 (0 undef) (1 undef) (2 undef)))))
+ (term 3))
+(test-equal?
+ "get-next-block filled memory"
+ (term (get-next-block ((1 (0 undef) (1 undef) (2 undef)) (2) (3 (0 undef) (1 undef) (2 undef)) (4 (10 (int 0))))))
+ (term 5))
 
 ; init-struct-fields
-
-
-
+(test-equal?
+ "init-struct-fields no fields"
+ (term (init-struct-fields (1 (2 (int 3))) 0 ()))
+ (term (1 (2 (int 3)))))
+(test-equal?
+ "init-struct-fields no fields"
+ (term (init-struct-fields (1 (2 (int 3)) (3 (ptr (0 0))) (4 (int 3))) 0 ()))
+ (term (1 (2 (int 3)) (3 (ptr (0 0))) (4 (int 3)))))
+(test-equal?
+ "init-struct-fields with fields"
+ (term (init-struct-fields (0) 0 ((aaa int))))
+ (term (0 (0 undef))))
+(test-equal?
+ "init-struct-fields with fields"
+ (term (init-struct-fields (0) 0 ((aaa int) (bbb (pointer int)))))
+ (term (0 (0 undef) (4 undef))))
+(test-equal?
+ "init-struct-fields with fields"
+ (term (init-struct-fields (1) 3 ((aaa int) (bbb (pointer int)))))
+ (term (1 (3 undef) (7 undef))))
+(test-equal?
+ "init-struct-fields with fields"
+ (term (init-struct-fields (1 (2 (int 1))) 3 ((aaa int) (bbb (pointer int)))))
+ (term (1 (2 (int 1)) (3 undef) (7 undef))))
+(test-equal?
+ "init-struct-fields with fields"
+ (term (init-struct-fields (1 (0 (ptr (0 0))) (1 (int 1)) (2 (int 2))) 3 ((aaa int) (bbb (pointer int)))))
+ (term (1 (0 (ptr (0 0))) (1 (int 1)) (2 (int 2)) (3 undef) (7 undef))))
+(test-equal?
+ "init-struct-fields with array field"
+ (term (init-struct-fields (1 (2 (int 1))) 10 ((aaa int) (ccc (array int 3)) (bbb (pointer int)))))
+ (term (1 (2 (int 1)) (10 undef) (14 undef) (18 undef) (22 undef) (26 undef))))
+(test-equal?
+ "init-struct-fields with struct field"
+ (term (init-struct-fields (1 (2 (int 1))) 10 ((aaa int) (ccc (array int 3)) (bbb (struct iii (i1 int) (i2 (pointer int)))))))
+ (term (1 (2 (int 1)) (10 undef) (14 undef) (18 undef) (22 undef) (26 undef) (30 undef))))
+(test-equal?
+ "init-struct-fields with nested arrays"
+ (term (init-struct-fields (1 (2 (int 1))) 10 ((aaa int) (ccc (array (array int 3) 2)) (bbb (pointer int)))))
+ (term (1 (2 (int 1)) (10 undef) (14 undef) (18 undef) (22 undef) (26 undef) (30 undef) (34 undef) (38 undef))))
+(test-equal?
+ "init-struct-fields with nested structs"
+ (term (init-struct-fields (1 (2 (int 1))) 10 ((aaa int) (ccc (array int 3)) (bbb (struct iii (i1 (struct jjj (j1 int) (j2 int))) (i2 (pointer int)))))))
+ (term (1 (2 (int 1)) (10 undef) (14 undef) (18 undef) (22 undef) (26 undef) (30 undef) (34 undef))))
 
 ; init-array
-
-
-
+(test-equal?
+ "init-array no elements"
+ (term (init-array (1 (2 (int 3))) 0 int 0))
+ (term (1 (2 (int 3)))))
+(test-equal?
+ "init-array no elements"
+ (term (init-array (1 (2 (int 3)) (3 (ptr (0 0))) (4 (int 3))) 0 (pointer int) 0))
+ (term (1 (2 (int 3)) (3 (ptr (0 0))) (4 (int 3)))))
+(test-equal?
+ "init-array with elements"
+ (term (init-array (0) 0 int 1))
+ (term (0 (0 undef))))
+(test-equal?
+ "init-array with elements"
+ (term (init-array (3 (2 undef)) 10 int 3))
+ (term (3 (2 undef) (10 undef) (14 undef) (18 undef))))
+(test-equal?
+ "init-array with elements"
+ (term (init-array (3 (2 undef) (3 (int 1))) 4 (pointer int) 4))
+ (term (3 (2 undef) (3 (int 1)) (4 undef) (12 undef) (20 undef) (28 undef))))
+(test-equal?
+ "init-array with array elements"
+ (term (init-array (3 (2 undef) (3 (int 1))) 10 (array int 4) 2))
+ (term (3 (2 undef) (3 (int 1)) (10 undef) (14 undef) (18 undef) (22 undef) (26 undef) (30 undef) (34 undef) (38 undef))))
+(test-equal?
+ "init-array with struct elements"
+ (term (init-array (3 (2 undef) (3 (int 1))) 10 (struct aaa (iii (pointer int)) (jjj int)) 2))
+ (term (3 (2 undef) (3 (int 1)) (10 undef) (18 undef) (22 undef) (30 undef))))
+(test-equal?
+ "init-array with struct elements containing arrays"
+ (term (init-array (3 (2 undef) (3 (int 1))) 10 (struct aaa (iii (pointer int)) (jjj (array int 2))) 2))
+ (term (3 (2 undef) (3 (int 1)) (10 undef) (18 undef) (22 undef) (26 undef) (34 undef) (38 undef))))
 
 ; init
-
-
-
+(test-equal?
+ "init no declarations"
+ (term (init () () ()))
+ (term (() ())))
+(test-equal?
+ "init with declarations"
+ (term (init () () ((int aaa))))
+ (term (((aaa 0)) ((0 (0 undef))))))
+(test-equal?
+ "init with declarations"
+ (term (init () () ((int aaa) (int bbb))))
+ (term (((aaa 0) (bbb 1)) ((0 (0 undef)) (1 (0 undef))))))
+(test-equal?
+ "init with declarations"
+ (term (init () () ((int aaa) ((pointer int) ccc) (int bbb))))
+ (term (((aaa 0) (ccc 1) (bbb 2)) ((0 (0 undef)) (1 (0 undef)) (2 (0 undef))))))
+(test-equal?
+ "init with declarations"
+ (term (init () () ((int aaa) ((pointer int) ccc) (int bbb) ((union abc (aa int) (bb int)) ddd))))
+ (term (((aaa 0) (ccc 1) (bbb 2) (ddd 3)) ((0 (0 undef)) (1 (0 undef)) (2 (0 undef)) (3 (0 undef))))))
+(test-equal?
+ "init with array declarations"
+ (term (init () () (((array int 3) aaa))))
+ (term (((aaa 0)) ((0 (0 undef) (4 undef) (8 undef))))))
+(test-equal?
+ "init with array declarations"
+ (term (init () () (((array int 3) aaa) ((array (pointer int) 2) bbb))))
+ (term (((aaa 0) (bbb 1)) ((0 (0 undef) (4 undef) (8 undef)) (1 (0 undef) (8 undef))))))
+(test-equal?
+ "init with struct declarations"
+ (term (init () () (((struct abc (aa int) (bb (pointer int))) aaa))))
+ (term (((aaa 0)) ((0 (0 undef) (4 undef))))))
+(test-equal?
+ "init with struct declarations"
+ (term (init () () (((struct abc (aa int) (bb (pointer int))) aaa) ((struct xyz (aa (pointer int)) (bb (array int 3))) bbb))))
+ (term (((aaa 0) (bbb 1)) ((0 (0 undef) (4 undef)) (1 (0 undef) (8 undef) (12 undef) (16 undef))))))
+(test-equal?
+ "init with struct declarations"
+ (term (init () () (((union abc (aa int) (bb (pointer int))) aaa) ((struct xyz (aa (pointer int)) (bb (array int 3))) bbb))))
+ (term (((aaa 0) (bbb 1)) ((0 (0 undef)) (1 (0 undef) (8 undef) (12 undef) (16 undef))))))
+(test-equal?
+ "init with struct declarations"
+ (term (init ((ccc 2)) ((2) (3 (0 undef))) (((union abc (aa int) (bb (pointer int))) aaa) ((struct xyz (aa (pointer int)) (bb (array int 3))) bbb))))
+ (term (((ccc 2) (aaa 4) (bbb 5)) ((2) (3 (0 undef)) (4 (0 undef)) (5 (0 undef) (8 undef) (12 undef) (16 undef))))))
 
 ; get-G
 (test-equal?
@@ -213,9 +467,38 @@
  (term ((0 (0 (int 1))) (1 (0 (int 1))))))
 
 ; loadval
-
-
-
+(test-equal?
+ "loadval int"
+ (term (loadval int ((1 (0 (int 1)) (1 (int 2))) (2 (0 (int 3)))) (2 0)))
+ (term (int 3)))
+(test-equal?
+ "loadval pointer"
+ (term (loadval (pointer int) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3)))) (1 1)))
+ (term (ptr (1 0))))
+(test-equal?
+ "loadval pointer"
+ (term (loadval (pointer int) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (3 1)))
+ (term (ptr (2 0))))
+(test-equal?
+ "loadval array"
+ (term (loadval (array (pointer int) 100) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (3 1)))
+ (term (ptr (3 1))))
+(test-equal?
+ "loadval array"
+ (term (loadval (array (struct abc (aa int) (bb (pointer int))) 15) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (2 0)))
+ (term (ptr (2 0))))
+(test-exn
+ "loadval void"
+ exn:fail?
+ (λ () (term (loadval void ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (1 0)))))
+(test-exn
+ "loadval struct"
+ exn:fail?
+ (λ () (term (loadval (struct abc (aa int)) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (1 1)))))
+(test-exn
+ "loadval union"
+ exn:fail?
+ (λ () (term (loadval (union xyz (bb (pointer int)) (cc (array int 10))) ((1 (0 (int 1)) (1 (ptr (1 0)))) (2 (0 (int 3))) (3 (0 (int 1)) (1 (ptr (2 0))))) (3 0)))))
 
 ; storeval
 (test-equal?
@@ -612,3 +895,136 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TEST BIG-STEP REDUCTION RULES ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; lval 1
+(test-judgment-holds (lval ((aaa 0) (bbb 1)) () (aaa int)
+                           (0 0)))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) () (ccc int)
+                           (2 0)))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) () (bbb (pointer (array int 6)))
+                           (1 0)))
+
+; lval 2
+(test-judgment-holds (lval ((aaa 0) (bbb 1)) ((0 (0 (ptr (0 0))))) ((* (aaa (pointer int))) int)
+                           (0 0)))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) ((2 (0 (ptr (1 1))))) ((* (ccc (pointer int))) int)
+                           (1 1)))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) ((0 (0 (ptr (1 0)))) (1 (0 (ptr (1 3)))) (2 (0 (ptr (1 2))))) ((* (bbb (pointer (pointer int)))) (pointer int))
+                           (1 3)))
+
+; lval 3
+
+
+
+; lval 4
+
+
+
+; rval 5
+
+
+
+; rval 7
+
+
+
+; rval 8
+
+
+
+; rval 9
+
+
+
+; rval 10
+
+
+
+; rval 11
+
+
+
+; rval 12
+
+
+
+; rval 13
+
+
+
+; stmt 15
+
+
+
+; stmt 16
+
+
+
+; stmt 17
+
+
+
+; stmt 18
+
+
+
+; stmt 19
+
+
+
+; stmt 20
+
+
+
+; stmt 21
+
+
+
+; stmt 22
+
+
+
+; stmt if-true
+
+
+
+; stmt if-false
+
+
+
+; stmt 23
+
+
+
+; stmt 24
+
+
+
+; stmt 25a
+
+
+
+; stmt 25b
+
+
+
+; stmt 26
+
+
+
+; stmt 27
+
+
+
+; stmt 28
+
+
+
+; stmt 29a
+
+
+
+; stmt 29b
+
+
+
+; prog 40

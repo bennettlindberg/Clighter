@@ -94,71 +94,119 @@
   [(size-of (union id_union)) ,0])
 
 ; field-offset : id (φ ...) δ -> δ
-; Returns the field offset of field "id" in the struct at block "b" in memory state "M"
+; Returns the "δ" offset of field "id" in the struct with fields "(φ ...)"
 (define-metafunction Clighter
   field-offset : id (φ ...) δ -> δ
   [(field-offset id_target ((id_field τ) φ ...) δ)
-   (field-offset id_target (φ ...) (term ,(+ (term δ) (term (size-of τ)))))]
-  [(field-offset id_target ((id_target τ) φ ...) δ)
-   δ]
+   ,(if (equal? (term id_target) (term id_field))
+       (term δ)
+       (term (field-offset id_target (φ ...) ,(+ (term δ) (term (size-of τ))))))]
   [(field-offset id_target () δ)
-   ,(raise-argument-error 'field-offset "field id that exists within the struct" (term id))])
+   ,(raise-argument-error 'field-offset "field id that exists within the struct" (term id_target))])
 
 ; get-next-block : M -> b
-; Returns the last allocated block in the memory state "M"
+; Returns the lowest-value unallocated block in the memory state "M"
 (define-metafunction Clighter
   get-next-block : M -> b
   [(get-next-block ())
    0]
-  [(get-next-block ((b δ↦v) b↦δ↦v ...))
+  [(get-next-block ((b δ↦v ...) b↦δ↦v ...))
    ,(max (term ,(+ 1 (term b))) (term (get-next-block (b↦δ↦v ...))))])
 
 ; init-struct-fields : b↦δ↦v δ (φ ...) -> b↦δ↦v
 ; Initializes a struct by creating δ↦v pairs in block "b" for each field of the struct
+; (NOTE: handles nested arrays and structs in-place)
 (define-metafunction Clighter
   init-struct-fields : b↦δ↦v δ (φ ...) -> b↦δ↦v
-  [(init-struct-fields (b δ↦v ...) δ ((id τ) φ ...))
-   (init-struct-fields (b (δ undef) δ↦v ...) ,(+ (term δ) (term (size-of τ))) (φ ...))]
+  ; done
   [(init-struct-fields b↦δ↦v δ ())
-   b↦δ↦v])
+   b↦δ↦v]
+  ; field is an array
+  [(init-struct-fields (b δ↦v ...)
+                       δ
+                       ((id (array τ n)) φ ...))
+   (init-struct-fields (init-array (b δ↦v ...) δ τ n)
+                       ,(+ (term δ) (term (size-of (array τ n))))
+                       (φ ...))]
+  ; field is a struct
+  [(init-struct-fields (b δ↦v ...)
+                       δ
+                       ((id (struct id_struct φ_field ...)) φ ...))
+   (init-struct-fields (init-struct-fields (b δ↦v ...) δ (φ_field ...))
+                       ,(+ (term δ) (term (size-of (struct id_struct φ_field ...))))
+                       (φ ...))]
+  ; field is something else
+  [(init-struct-fields (b δ↦v ...)
+                       δ
+                       ((id τ) φ ...))
+   (init-struct-fields (b δ↦v ... (δ undef))
+                       ,(+ (term δ) (term (size-of τ)))
+                       (φ ...))])
 
 ; init-array : b↦δ↦v δ τ n -> b↦δ↦v
 ; Initializes an array by creating "n" δ↦v pairs in block "b"
+; (NOTE: handles nested arrays and structs in-place)
 (define-metafunction Clighter
   init-array : b↦δ↦v δ τ n -> b↦δ↦v
-  [(init-array (b δ↦v ...) δ τ n)
-   (init-array (b (δ undef) δ↦v ...) ,(+ (term δ) (term (size-of τ))) τ ,(- (term n) 1))]
+  ; done
   [(init-array (b δ↦v ...) δ τ 0)
-   (b δ↦v ...)])
+   (b δ↦v ...)]
+  ; τ is a struct
+  [(init-array (b δ↦v ...)
+               δ
+               (struct id_struct φ ...)
+               n)
+   (init-array (init-struct-fields (b δ↦v ...) δ (φ ...))
+               ,(+ (term δ) (term (size-of (struct id_struct φ ...))))
+               (struct id_struct φ ...)
+               ,(- (term n) 1))]
+  ; τ is an array
+  [(init-array (b δ↦v ...)
+               δ
+               (array τ n_arr)
+               n)
+   (init-array (init-array (b δ↦v ...) δ τ n_arr)
+               ,(+ (term δ) (term (size-of (array τ n_arr))))
+               (array τ n_arr)
+               ,(- (term n) 1))]
+  ; τ is something else
+  [(init-array (b δ↦v ...)
+               δ
+               τ
+               n)
+   (init-array (b δ↦v ... (δ undef))
+               ,(+ (term δ) (term (size-of τ)))
+               τ
+               ,(- (term n) 1))])
 
 ; init : G M (dcl ...) -> (G M)
 ; Returns the initial variable environment "G" and memory state "M" provided program declarations "dcl ..."
 (define-metafunction Clighter
   init : G M (dcl ...) -> (G M)
-  ; struct
-  [(init (id↦b ...)
-         (b↦δ↦v ...)
-         ((id (struct id_struct φ ...)) dcl ...))
-   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
-         ((init-struct-fields ((get-next-block (b↦δ↦v ...))) 0 (φ ...)) b↦δ↦v ...)
-         (dcl ...))]
-  ; array
-  [(init (id↦b ...)
-         (b↦δ↦v ...)
-         ((id (array τ n)) dcl ...))
-   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
-         ((init-array ((get-next-block (b↦δ↦v ...))) 0 τ n) b↦δ↦v ...)
-         (dcl ...))]
-  ; int, void, pointer, and union
-  [(init (id↦b ...)
-         (b↦δ↦v ...)
-         ((id τ) dcl ...))
-   (init ((id (get-next-block (b↦δ↦v ...))) id↦b ...)
-         (((get-next-block (b↦δ↦v ...)) (0 undef)) b↦δ↦v ...)
-         (dcl ...))]
-  ; base case
+  ; done
   [(init G M ())
-   (G M)])
+   (G M)]
+  ; next dcl is a struct
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         (((struct id_struct φ ...) id) dcl ...))
+   (init (id↦b ... (id (get-next-block (b↦δ↦v ...))))
+         (b↦δ↦v ... (init-struct-fields ((get-next-block (b↦δ↦v ...))) 0 (φ ...)))
+         (dcl ...))]
+  ; next dcl is an array
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         (((array τ n) id) dcl ...))
+   (init (id↦b ... (id (get-next-block (b↦δ↦v ...))))
+         (b↦δ↦v ... (init-array ((get-next-block (b↦δ↦v ...))) 0 τ n))
+         (dcl ...))]
+  ; next dcl is something else
+  [(init (id↦b ...)
+         (b↦δ↦v ...)
+         ((τ id) dcl ...))
+   (init (id↦b ... (id (get-next-block (b↦δ↦v ...))))
+         (b↦δ↦v ... ((get-next-block (b↦δ↦v ...)) (0 undef)))
+         (dcl ...))])
 
 ; get-G : (G M) -> G
 ; Extracts G from the return of the init meta-function
@@ -188,7 +236,9 @@
   [(loadval (struct id φ ...) (b↦δ↦v ...) (b δ))
    ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
   [(loadval (union id φ ...) (b↦δ↦v ...) (b δ))
-   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))])
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
+  [(loadval τ M l)
+   ,(raise-argument-error 'loadval "existing location in the memory" (term l))])
 
 ; storeval : τ M l v -> M
 ; Returns the memory state "M" after storing the value "v" at location "l"
