@@ -228,17 +228,17 @@
   [(loadval int (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v) δ↦v_2 ...) b↦δ↦v_2 ...) (b δ))
    v]
   [(loadval void (b↦δ↦v ...) (b δ))
-   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term void))]
   [(loadval (array τ n) (b↦δ↦v ...) (b δ))
    (ptr (b δ))]
   [(loadval (pointer τ) (b↦δ↦v_1 ... (b δ↦v_1 ... (δ v) δ↦v_2 ...) b↦δ↦v_2 ...) (b δ))
    v]
   [(loadval (struct id φ ...) (b↦δ↦v ...) (b δ))
-   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term (struct id φ ...)))]
   [(loadval (union id φ ...) (b↦δ↦v ...) (b δ))
-   ,(raise-argument-error 'loadval "int, array, or pointer" (term τ))]
+   ,(raise-argument-error 'loadval "int, array, or pointer" (term (union id φ ...)))]
   [(loadval τ M l)
-   ,(raise-argument-error 'loadval "existing location in the memory" (term l))])
+   ,(raise-argument-error 'loadval "existing location in the memory (SEGFAULT)" (term l))])
 
 ; storeval : τ M l v -> M
 ; Returns the memory state "M" after storing the value "v" at location "l"
@@ -290,9 +290,10 @@
   [(eval-binop != (int n_1) int (int n_2) int) (int ,(boolean-to-int (not (equal? (term n_1) (term n_2)))))]
   ; pointer - arithmetic
   [(eval-binop + (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(+ (term δ) (term n))))]
+  [(eval-binop + (int n) int (ptr (b δ)) (pointer τ)) (ptr (b ,(+ (term δ) (term n))))]
   [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (term n))))]
   ; else
-  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term τ))])
+  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term τ_1))])
 
 ; boolean-to-int
 ; Returns the integer representation of a boolean value
@@ -367,7 +368,7 @@
 
   ; fetch location of field "id" in struct expression "a"
   ; (NOTE: struct fields have offsets from overall struct location)
-  [(lval G M ((@ (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
+  [(lval G M (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...))
          (b δ))
    --------------------------------------------- "3"
    (lval G M ((@ (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
@@ -375,7 +376,7 @@
 
   ; fetch location of field "id" in union expression "a"
   ; (NOTE: union fields do not have offsets)
-  [(lval G M ((@ (a (union id_union φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
+  [(lval G M (a (union id_union φ_1 ... (id_field τ) φ_2 ...))
          l)
    --------------------------------------------- "4"
    (lval G M ((@ (a (union id_union φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
@@ -400,7 +401,7 @@
   ; compute size of the type "τ" of expression "a"
   [
    --------------------------------------------- "7"
-   (rval G M (sizeof (a τ))
+   (rval G M ((sizeof (a τ)) int)
          (int (size-of τ)))]
 
   ; fetch value from location of expression "a"
@@ -414,14 +415,14 @@
   [(lval G M a+τ
          l)
    --------------------------------------------- "9"
-   (rval G M (& a+τ)
+   (rval G M ((& a+τ) τ_outer)
          (ptr l))]
 
   ; evaluate unary operation "uop" with evaluation of "a"
   [(rval G M (a τ)
          v)
    --------------------------------------------- "10"
-   (rval G M (uop (a τ))
+   (rval G M ((uop (a τ)) τ_outer)
          (eval-unop uop v τ))]
 
   ; evaluate binary operation "bop" with evaluation of "a_1" and "a_2"
@@ -430,7 +431,7 @@
    (rval G M (a_2 τ_2)
          v_2)
    --------------------------------------------- "11"
-   (rval G M (bop (a_1 τ_1) (a_2 τ_2))
+   (rval G M ((bop (a_1 τ_1) (a_2 τ_2)) τ_outer)
          (eval-binop bop v_1 τ_1 v_2 τ_2))]
 
   ; evaluate ternary conditional operator in "a_cond" true case
@@ -440,7 +441,7 @@
    (rval G M a+τ_true
          v_true)
    --------------------------------------------- "12"
-   (rval G M (? (a_cond τ_cond) a+τ_true a+τ_false)
+   (rval G M ((? (a_cond τ_cond) a+τ_true a+τ_false) τ_outer)
          v_true)]
 
   ; evaluate ternary conditional operator in "a_cond" false case
@@ -450,7 +451,7 @@
    (rval G M a+τ_false
          v_false)
    --------------------------------------------- "13"
-   (rval G M (? (a_cond τ_cond) a+τ_true a+τ_false)
+   (rval G M ((? (a_cond τ_cond) a+τ_true a+τ_false) τ_outer)
          v_false)])
 
    ; inference rule 14 removed - no type casts

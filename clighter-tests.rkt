@@ -766,7 +766,7 @@
 (test-exn
  "eval-binop wrong type"
  exn:fail?
- (λ () (term (eval-binop + (int 100) int (ptr (3 8)) (pointer int)))))
+ (λ () (term (eval-binop - (int 100) int (ptr (3 8)) (pointer int)))))
 (test-exn
  "eval-binop wrong type"
  exn:fail?
@@ -896,80 +896,237 @@
 ;; TEST BIG-STEP REDUCTION RULES ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; lval 1
-(test-judgment-holds (lval ((aaa 0) (bbb 1)) () (aaa int)
+(test-judgment-holds (lval ((aaa 0) (bbb 1))
+                           ()
+                           (aaa int)
                            (0 0)))
-(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) () (ccc int)
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2))
+                           ()
+                           (ccc int)
                            (2 0)))
-(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) () (bbb (pointer (array int 6)))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2))
+                           ()
+                           (bbb (pointer (array int 6)))
                            (1 0)))
 
 ; lval 2
-(test-judgment-holds (lval ((aaa 0) (bbb 1)) ((0 (0 (ptr (0 0))))) ((* (aaa (pointer int))) int)
+(test-judgment-holds (lval ((aaa 0) (bbb 1))
+                           ((0 (0 (ptr (0 0)))))
+                           ((* (aaa (pointer int))) int)
                            (0 0)))
-(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) ((2 (0 (ptr (1 1))))) ((* (ccc (pointer int))) int)
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2))
+                           ((2 (0 (ptr (1 1)))))
+                           ((* (ccc (pointer int))) int)
                            (1 1)))
-(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2)) ((0 (0 (ptr (1 0)))) (1 (0 (ptr (1 3)))) (2 (0 (ptr (1 2))))) ((* (bbb (pointer (pointer int)))) (pointer int))
+(test-judgment-holds (lval ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (ptr (1 0)))) (1 (0 (ptr (1 3)))) (2 (0 (ptr (1 2)))))
+                           ((* (bbb (pointer (pointer int)))) (pointer int))
                            (1 3)))
 
 ; lval 3
-
-
+(test-judgment-holds (lval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (struct xyz (aa int) (bb int))) aa) int)
+                           (1 0)))
+(test-judgment-holds (lval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (struct xyz (aa int) (bb int))) bb) int)
+                           (1 4)))
+(test-judgment-holds (lval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 4))
+                               (4 (int 5))
+                               (8 (ptr (0 0)))
+                               (16 (ptr (1 0)))))
+                           ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))
+                           (4 16)))
+(test-judgment-holds (lval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)) (8 (int 6))))
+                           ((@ ((@ (abc (struct xyz (aa int) (bb (struct hjk (ii int) (jj int))))) bb) (struct hjk (ii int) (jj int))) jj) int)
+                           (1 8)))
 
 ; lval 4
-
-
+(test-judgment-holds (lval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (union xyz (aa int) (bb int))) aa) int)
+                           (1 0)))
+(test-judgment-holds (lval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (union xyz (aa int) (bb int))) bb) int)
+                           (1 0)))
+(test-judgment-holds (lval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 4))
+                               (4 (int 5))
+                               (8 (ptr (0 0)))
+                               (16 (ptr (1 0)))))
+                           ((@ (abc (union xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))
+                           (4 0)))
 
 ; rval 5
-
-
+(test-judgment-holds (rval () () (100 int)
+                            (int 100)))
+(test-judgment-holds (rval ((abc 1) (bbb 2)) ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)))) (100 int)
+                            (int 100)))
+(test-judgment-holds (rval ((abc 1) (bbb 2)) ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)))) (-5 int)
+                            (int -5)))
 
 ; rval 7
-
-
+(test-judgment-holds (rval () () ((sizeof (10 int)) int) (int 4)))
+(test-judgment-holds (rval () () ((sizeof (abc (union xyz (jj (pointer int)) (ii (array int 10))))) int) (int 40)))
+(test-judgment-holds (rval () () ((sizeof (abc (struct xyz (jj (pointer int)) (ii (array int 10))))) int) (int 48)))
 
 ; rval 8
-
-
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (struct xyz (aa int) (bb int))) aa) int)
+                           (int 4)))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((@ (abc (struct xyz (aa int) (bb int))) bb) int)
+                           (int 5)))
+(test-judgment-holds (rval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 4))
+                               (4 (int 5))
+                               (8 (ptr (0 0)))
+                               (16 (ptr (1 0)))))
+                           ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))
+                           (ptr (1 0))))
 
 ; rval 9
-
-
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((& ((@ (abc (struct xyz (aa int) (bb int))) bb) int)) (pointer int))
+                           (ptr (1 4))))
+(test-judgment-holds (rval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 4))
+                               (4 (int 5))
+                               (8 (ptr (0 0)))
+                               (16 (ptr (1 0)))))
+                           ((& ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))) (pointer int))
+                           (ptr (4 16))))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)) (8 (int 6))))
+                           ((& ((@ ((@ (abc (struct xyz (aa int) (bb (struct hjk (ii int) (jj int))))) bb) (struct hjk (ii int) (jj int))) jj) int)) (pointer int))
+                           (ptr (1 8))))
 
 ; rval 10
-
-
+(test-judgment-holds (rval () () ((- (4 int)) int)
+                           (int -4)))
+(test-judgment-holds (rval () () ((! (4 int)) int)
+                           (int 0)))
+(test-judgment-holds (rval () () ((~ (4 int)) int)
+                           (int -5)))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5))))
+                           ((- ((@ (abc (struct xyz (aa int) (bb int))) bb) int)) int)
+                           (int -5)))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 0))))
+                           ((! ((@ (abc (struct xyz (aa int) (bb int))) bb) int)) int)
+                           (int 1)))
 
 ; rval 11
-
-
+(test-judgment-holds (rval () () ((- (4 int) (4 int)) int)
+                           (int 0)))
+(test-judgment-holds (rval () () ((< (3 int) (4 int)) int)
+                           (int 1)))
+(test-judgment-holds (rval () () ((& (3 int) (4 int)) int)
+                           (int 0)))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 10)) (4 (int 11))))
+                           ((* ((@ (abc (struct xyz (aa int) (bb int))) bb) int)
+                               ((@ (abc (struct xyz (aa int) (bb int))) aa) int)) int)
+                           (int 110)))
+(test-judgment-holds (rval ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           ((% ((@ (abc (struct xyz (aa int) (bb int))) bb) int)
+                               ((@ (abc (struct xyz (aa int) (bb int))) aa) int)) int)
+                           (int 1)))
 
 ; rval 12
-
-
+(test-judgment-holds (rval () () ((? (3 int) (10 int) (20 int)) int)
+                            (int 10)))
+(test-judgment-holds (rval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 4))
+                               (4 (int 5))
+                               (8 (ptr (0 0)))
+                               (16 (ptr (1 0)))))
+                           ((? ((& (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int))))) (pointer (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))))
+                               ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))
+                               ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) cc) (pointer int)))
+                            (pointer int))
+                           (ptr (1 0))))
 
 ; rval 13
-
-
+(test-judgment-holds (rval () () ((? (0 int) (10 int) (20 int)) int)
+                           (int 20)))
+(test-judgment-holds (rval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
+                           ((0 (0 (ptr (0 0))))
+                            (1 (0 (int 4))
+                               (4 (int 5)))
+                            (4 (0 (int 0))
+                               (4 (int 5))
+                               (8 (ptr (4 4)))
+                               (16 (ptr (1 0)))))
+                           ((? ((* ((& (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int))))) (pointer (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))))) int)
+                               ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) dd) (pointer int))
+                               ((@ (abc (struct xyz (aa int) (bb int) (cc (pointer int)) (dd (pointer int)))) cc) (pointer int)))
+                            (pointer int))
+                           (ptr (4 4))))
 
 ; stmt 15
-
-
+(test-judgment-holds (stmt () () skip Normal ()))
+(test-judgment-holds (stmt ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           skip
+                           Normal
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 16
-
-
+(test-judgment-holds (stmt () () break Break ()))
+(test-judgment-holds (stmt ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           break
+                           Break
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 17
-
-
+(test-judgment-holds (stmt () () continue Continue ()))
+(test-judgment-holds (stmt ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           continue
+                           Continue
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 18
-
-
+(test-judgment-holds (stmt () () return Return ()))
+(test-judgment-holds (stmt ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           return
+                           Return
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 19
-
-
+(test-judgment-holds (stmt () () (return (50 int)) (Return (int 50)) ()))
+(test-judgment-holds (stmt ((abc 1) (bbb 2))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
+                           (return ((+ (4 int) ((& (abc (struct xyz (aa int) (bb int)))) (pointer int))) (pointer int)))
+                           (Return (ptr (1 4)))
+                           ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 20
 
