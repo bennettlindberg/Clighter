@@ -307,14 +307,16 @@
 (define-metafunction Clighter
   is-true : v τ -> boolean
   [(is-true v (pointer τ)) ,#t]
-  [(is-true (int n) int) ,(not (equal? (term n) 0))])
+  [(is-true (int n) int) ,(not (equal? (term n) 0))]
+  [(is-true v τ) ,(raise-argument-error 'is-true "int or pointer value" (term v))])
 
 ; is-false : v τ -> boolean
 ; Returns the logical "falsiness" of input "v" based on its type "τ"
 (define-metafunction Clighter
   is-false : v τ -> boolean
   [(is-false v (pointer τ)) ,#f]
-  [(is-false (int n) int) ,(equal? (term n) 0)])
+  [(is-false (int n) int) ,(equal? (term n) 0)]
+  [(is-false v τ) ,(raise-argument-error 'is-false "int or pointer value" (term v))])
 
 ; loop-exit-out-update : out -> out
 ; Returns the updated outcome "out" post exit of a loop
@@ -324,6 +326,15 @@
   [(loop-exit-out-update Return) Return]
   [(loop-exit-out-update (Return v)) (Return v)]
   [(loop-exit-out-update out) ,(raise-argument-error 'loop-exit-out-update "Break, Return, or (Return v)" (term out))])
+
+; is-break-or-return : out -> boolean
+; Returns true if the outcome "out" is "Break", "Return", or "(Return v)"
+(define-metafunction Clighter
+  is-break-or-return : out -> boolean
+  [(is-break-or-return Break) #t]
+  [(is-break-or-return Return) #t]
+  [(is-break-or-return (Return v)) #t]
+  [(is-break-or-return out) #f])
 
 ; is-not-normal? : out -> boolean
 ; Returns true if the outcome "out" is not "Normal"
@@ -561,6 +572,7 @@
    (side-condition (is-true v τ))
    (stmt G M s
          out M_1)
+   (side-condition (is-break-or-return out))
    --------------------------------------------- "24"
    (stmt G M (while (a τ) s)
          (loop-exit-out-update out) M_1)]
@@ -614,6 +626,7 @@
    (side-condition (is-true v τ))
    (stmt G M s_body
          out M_1)
+   (side-condition (is-break-or-return out))
    --------------------------------------------- "28"
    (stmt G M (for skip (a τ) s_incr s_body)
          (loop-exit-out-update out) M_1)]

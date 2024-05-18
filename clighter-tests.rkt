@@ -1129,59 +1129,333 @@
                            ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
 ; stmt 20
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (= (aaa int)
+                              (30 int))
+                           Normal
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 8))))
+                           (= ((* (bbb (pointer int))) int)
+                              (30 int))
+                           Normal
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (= ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) aa) int)
+                              ((* (bbb (pointer int))) int))
+                           Normal
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 99)) (4 (ptr (2 0)))))))
 
 ; stmt 21
-
-
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           ((= ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) aa) int)
+                              ((* (bbb (pointer int))) int))
+                            (= (aaa int)
+                              (30 int)))
+                           Normal
+                           ((0 (0 (int 30))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 99)) (4 (ptr (2 0)))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           ((= ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) bb) (pointer int))
+                              (bbb (pointer int)))
+                            (= (aaa int)
+                              ((* ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) bb) (pointer int))) int)))
+                           Normal
+                           ((0 (0 (int 99))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (1 8)))))))
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (skip
+                            (= (aaa int)
+                              (30 int)))
+                           Normal
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           ((= (aaa int)
+                              (30 int))
+                            break)
+                           Break
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           ((= (aaa int)
+                              (30 int))
+                            (= (aaa int)
+                              (40 int)))
+                           Normal
+                           ((0 (0 (int 40))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 8))))
+                           ((= ((* (bbb (pointer int))) int)
+                              (30 int))
+                            (return ((* (bbb (pointer int))) int)))
+                           (Return (int 30))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 30))))))
 
 ; stmt 22
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (((= (aaa int)
+                              (30 int))
+                            break)
+                            (= (aaa int)
+                              (40 int)))
+                           Break
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (break
+                            (= (aaa int)
+                              (40 int)))
+                           Break
+                           ((0 (0 (int 4))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 8))))
+                           (((= ((* (bbb (pointer int))) int)
+                              (30 int))
+                            (return ((* (bbb (pointer int))) int)))
+                            (= (aaa int)
+                              (40 int)))
+                           (Return (int 30))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 30))))))
 
 ; stmt if-true
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (if (11 int)
+                               (= (aaa int)
+                                  (30 int))
+                               (= (aaa int)
+                                  (40 int)))
+                           Normal
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 4))) (1 (0 (ptr (0 0)))))
+                           (if ((* (bbb (pointer int))) int)
+                               ((= (aaa int)
+                                  (30 int))
+                                break)
+                               ((= (aaa int)
+                                  (40 int))
+                                continue))
+                           Break
+                           ((0 (0 (int 30))) (1 (0 (ptr (0 0)))))))
 
 ; stmt if-false
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (if (0 int)
+                               (= (aaa int)
+                                  (30 int))
+                               (= (aaa int)
+                                  (40 int)))
+                           Normal
+                           ((0 (0 (int 40))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 0))) (1 (0 (ptr (0 0)))))
+                           (if ((* (bbb (pointer int))) int)
+                               ((= (aaa int)
+                                  (30 int))
+                                break)
+                               ((= (aaa int)
+                                  (40 int))
+                                continue))
+                           Continue
+                           ((0 (0 (int 40))) (1 (0 (ptr (0 0)))))))
 
 ; stmt 23
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (while ((- (10 int) (10 int)) int)
+                                  (= (aaa int)
+                                     (30 int)))
+                           Normal
+                           ((0 (0 (int 4))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (while ((* (bbb (pointer int))) int)
+                                  (= (aaa int)
+                                     (30 int)))
+                           Normal
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 24
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4))))
+                           (while ((- (10 int) (11 int)) int)
+                                  ((= (aaa int)
+                                     (30 int))
+                                   break))
+                           Normal
+                           ((0 (0 (int 30))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (while ((* (bbb (pointer int))) int)
+                                  ((= (aaa int)
+                                     (30 int))
+                                   return))
+                           Return
+                           ((0 (0 (int 30))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 25a
-
-
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
+                           (while ((* (bbb (pointer int))) int)
+                                  (= (bbb (pointer int))
+                                     ((+ (1 int) (bbb (pointer int))) (pointer int))))
+                           Normal
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 1)))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (while (aaa int)
+                                  (= (aaa int)
+                                      ((- (aaa int) (1 int)) int)))
+                           Normal
+                           ((0 (0 (int 0))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 25b
-
-
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
+                           (while ((* (bbb (pointer int))) int)
+                                  ((= (bbb (pointer int))
+                                     ((+ (1 int) (bbb (pointer int))) (pointer int)))
+                                   continue))
+                           Normal
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 1)))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (while (aaa int)
+                                  ((= (aaa int)
+                                      ((- (aaa int) (1 int)) int))
+                                   (if (aaa int)
+                                       continue
+                                       break)))
+                           Normal
+                           ((0 (0 (int 0))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 26
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4)) (4 (int 0))))
+                           (for skip
+                             (aaa int)
+                             (= (aaa int)
+                                ((- (aaa int) (1 int)) int))
+                             (= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                                 (aaa int)))
+                           Normal
+                           ((0 (0 (int 0)) (4 (int 1))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int -9))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (for skip
+                             ((* (bbb (pointer int))) int)
+                             (= ((* (bbb (pointer int))) int)
+                                ((+ ((* (bbb (pointer int))) int) (1 int)) int))
+                             (= (aaa int)
+                                ((+ (10 int) (aaa int)) int)))
+                           Normal
+                           ((0 (0 (int 94))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 27
-
-
+(test-judgment-holds (stmt ((aaa 0) (bbb 1))
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
+                           (for skip
+                             (0 int)
+                             (= (aaa int)
+                                (30 int))
+                             (= (aaa int)
+                                (40 int)))
+                           Normal
+                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (for skip
+                             ((* (bbb (pointer int))) int)
+                             (= (aaa int)
+                                (30 int))
+                             (= (aaa int)
+                                (40 int)))
+                           Normal
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 28
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4)) (4 (int 0))))
+                           (for skip
+                             (aaa int)
+                             (= (aaa int)
+                                ((- (aaa int) (1 int)) int))
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                                 (aaa int))
+                              break))
+                           Normal
+                           ((0 (0 (int 4)) (4 (int 4))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int -9))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (for skip
+                             ((* (bbb (pointer int))) int)
+                             (= ((* (bbb (pointer int))) int)
+                                ((+ ((* (bbb (pointer int))) int) (1 int)) int))
+                             ((= (aaa int)
+                                ((+ (10 int) (aaa int)) int))
+                              (if ((== (44 int) (aaa int)) int)
+                                  (return (aaa int))
+                                  continue)))
+                           (Return (int 44))
+                           ((0 (0 (int 44))) (1 (0 (ptr (1 8))) (8 (int -6))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 29a
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4)) (4 (int 0))))
+                           (for skip
+                             (aaa int)
+                             (= (aaa int)
+                                ((- (aaa int) (1 int)) int))
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                                 (aaa int))
+                              skip))
+                           Normal
+                           ((0 (0 (int 0)) (4 (int 1))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int -9))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (for skip
+                             ((* (bbb (pointer int))) int)
+                             (= ((* (bbb (pointer int))) int)
+                                ((+ ((* (bbb (pointer int))) int) (1 int)) int))
+                             ((= (aaa int)
+                                ((+ (10 int) (aaa int)) int))
+                              (if (0 int)
+                                  continue
+                                  skip)))
+                           Normal
+                           ((0 (0 (int 94))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; stmt 29b
-
-
+(test-judgment-holds (stmt ((aaa 0))
+                           ((0 (0 (int 4)) (4 (int 0))))
+                           (for skip
+                             (aaa int)
+                             (= (aaa int)
+                                ((- (aaa int) (1 int)) int))
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                                 (aaa int))
+                              continue))
+                           Normal
+                           ((0 (0 (int 0)) (4 (int 1))))))
+(test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
+                           ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int -9))) (2 (0 (int 1)) (4 (ptr (2 0)))))
+                           (for skip
+                             ((* (bbb (pointer int))) int)
+                             (= ((* (bbb (pointer int))) int)
+                                ((+ ((* (bbb (pointer int))) int) (1 int)) int))
+                             ((= (aaa int)
+                                ((+ (10 int) (aaa int)) int))
+                              (if (220 int)
+                                  continue
+                                  skip)))
+                           Normal
+                           ((0 (0 (int 94))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; prog 40
