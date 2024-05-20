@@ -327,14 +327,14 @@
   [(loop-exit-out-update (Return v)) (Return v)]
   [(loop-exit-out-update out) ,(raise-argument-error 'loop-exit-out-update "Break, Return, or (Return v)" (term out))])
 
-; is-break-or-return : out -> boolean
+; is-break-or-return? : out -> boolean
 ; Returns true if the outcome "out" is "Break", "Return", or "(Return v)"
 (define-metafunction Clighter
-  is-break-or-return : out -> boolean
-  [(is-break-or-return Break) #t]
-  [(is-break-or-return Return) #t]
-  [(is-break-or-return (Return v)) #t]
-  [(is-break-or-return out) #f])
+  is-break-or-return? : out -> boolean
+  [(is-break-or-return? Break) #t]
+  [(is-break-or-return? Return) #t]
+  [(is-break-or-return? (Return v)) #t]
+  [(is-break-or-return? out) #f])
 
 ; is-not-normal? : out -> boolean
 ; Returns true if the outcome "out" is not "Normal"
@@ -366,14 +366,14 @@
 
   ; fetch location of variable "id" in global environment "G"
   [
-   --------------------------------------------- "1"
+   --------------------------------------------- "lval 1: variable"
    (lval (id↦b_1 ... (id b) id↦b_2 ... b↦Fd ...) M (id τ)
          (b 0))]
 
   ; extract location from a pointer expression "a"
   ; (NOTE: for the purposes of assignment to a dereferenced pointer)
   [(rval G M a+τ (ptr l))
-   --------------------------------------------- "2"
+   --------------------------------------------- "lval 2: pointer"
    (lval G M ((* a+τ) τ)
          l)]
 
@@ -381,7 +381,7 @@
   ; (NOTE: struct fields have offsets from overall struct location)
   [(lval G M (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...))
          (b δ))
-   --------------------------------------------- "3"
+   --------------------------------------------- "lval 3: struct field"
    (lval G M ((@ (a (struct id_struct φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
          (b (field-offset id_field (φ_1 ... (id_field τ) φ_2 ...) δ)))]
 
@@ -389,7 +389,7 @@
   ; (NOTE: union fields do not have offsets)
   [(lval G M (a (union id_union φ_1 ... (id_field τ) φ_2 ...))
          l)
-   --------------------------------------------- "4"
+   --------------------------------------------- "lval 4: union"
    (lval G M ((@ (a (union id_union φ_1 ... (id_field τ) φ_2 ...)) id_field) τ)
          l)])
 
@@ -403,7 +403,7 @@
   ; wrap integer constant inside of value
   ; (NOTE: integer constant expression "n" gets converted to value "(int n)")
   [
-   --------------------------------------------- "5"
+   --------------------------------------------- "rval 5: int constant"
    (rval G M (n int)
          (int n))]
 
@@ -411,28 +411,28 @@
 
   ; compute size of the type "τ" of expression "a"
   [
-   --------------------------------------------- "7"
+   --------------------------------------------- "rval 7: sizeof type"
    (rval G M ((sizeof (a τ)) int)
          (int (size-of τ)))]
 
   ; fetch value from location of expression "a"
   [(lval G M (a τ)
          l)
-   --------------------------------------------- "8"
+   --------------------------------------------- "rval 8: load memory"
    (rval G M (a τ)
          (loadval τ M l))]
 
   ; fetch location of expression "a"
   [(lval G M a+τ
          l)
-   --------------------------------------------- "9"
+   --------------------------------------------- "rval 9: address of"
    (rval G M ((& a+τ) τ_outer)
          (ptr l))]
 
   ; evaluate unary operation "uop" with evaluation of "a"
   [(rval G M (a τ)
          v)
-   --------------------------------------------- "10"
+   --------------------------------------------- "rval 10: unary operation"
    (rval G M ((uop (a τ)) τ_outer)
          (eval-unop uop v τ))]
 
@@ -441,7 +441,7 @@
          v_1)
    (rval G M (a_2 τ_2)
          v_2)
-   --------------------------------------------- "11"
+   --------------------------------------------- "rval 11: binary operation"
    (rval G M ((bop (a_1 τ_1) (a_2 τ_2)) τ_outer)
          (eval-binop bop v_1 τ_1 v_2 τ_2))]
 
@@ -451,7 +451,7 @@
    (side-condition (is-true v_cond τ_cond))
    (rval G M a+τ_true
          v_true)
-   --------------------------------------------- "12"
+   --------------------------------------------- "rval 12: ternary true"
    (rval G M ((? (a_cond τ_cond) a+τ_true a+τ_false) τ_outer)
          v_true)]
 
@@ -461,7 +461,7 @@
    (side-condition (is-false v_cond τ_cond))
    (rval G M a+τ_false
          v_false)
-   --------------------------------------------- "13"
+   --------------------------------------------- "rval 13: ternary false"
    (rval G M ((? (a_cond τ_cond) a+τ_true a+τ_false) τ_outer)
          v_false)])
 
@@ -477,28 +477,28 @@
   ; evaluate "skip" statement
   ; (NOTE: "skip" (do-nothing statement) exists for evaluation of for loops)
   [
-   --------------------------------------------- "15"
+   --------------------------------------------- "stmt 15: skip"
    (stmt G M skip
          Normal M)]
 
   ; evaluate "break" statement
   ; (NOTE: continuation behavior handled by enclosing loop)
   [
-   --------------------------------------------- "16"
+   --------------------------------------------- " stmt16: break"
    (stmt G M break
          Break M)]
 
   ; evaluate "continue" statement
   ; (NOTE: continuation behavior handled by enclosing loop)
   [
-   --------------------------------------------- "17"
+   --------------------------------------------- "stmt 17: continue"
    (stmt G M continue
          Continue M)]
 
   ; evaluate empty "return" statement
   ; (NOTE: continuation behavior handled by enclosing loop and function)
   [
-   --------------------------------------------- "18"
+   --------------------------------------------- "stmt 18: return no value"
    (stmt G M return
          Return M)]
 
@@ -506,7 +506,7 @@
   ; (NOTE: continuation behavior handled by enclosing loop and function)
   [(rval G M a+τ
          v)
-   --------------------------------------------- "19"
+   --------------------------------------------- "stmt 19: return with value"
    (stmt G M (return a+τ)
          (Return v) M)]
 
@@ -516,7 +516,7 @@
          l)
    (rval G M a+τ_2
          v)
-   --------------------------------------------- "20"
+   --------------------------------------------- "stmt 20: variable assignment"
    (stmt G M (= (a_1 τ_1) a+τ_2)
          Normal (storeval τ_1 M l v))]
 
@@ -525,7 +525,7 @@
          Normal M_1)
    (stmt G M_1 s_2
          out M_2)
-   --------------------------------------------- "21"
+   --------------------------------------------- "stmt 21: sequence normal"
    (stmt G M (s_1 s_2)
          out M_2)]
 
@@ -533,7 +533,7 @@
   [(stmt G M s_1
          out M_1)
    (side-condition (is-not-normal? out))
-   --------------------------------------------- "22"
+   --------------------------------------------- "stmt 22: sequence non-normal"
    (stmt G M (s_1 s_2)
          out M_1)]
 
@@ -543,7 +543,7 @@
    (side-condition (is-true v_cond τ_cond))
    (stmt G M s_true
          out M_1)
-   --------------------------------------------- "if-true"
+   --------------------------------------------- "stmt __: if true"
    (stmt G M (if (a_cond τ_cond) s_true s_false)
          out M_1)]
 
@@ -553,7 +553,7 @@
    (side-condition (is-false v_cond τ_cond))
    (stmt G M s_false
          out M_1)
-   --------------------------------------------- "if-false"
+   --------------------------------------------- "stmt __: if false"
    (stmt G M (if (a_cond τ_cond) s_true s_false)
          out M_1)]
 
@@ -561,7 +561,7 @@
   [(rval G M (a τ)
          v)
    (side-condition (is-false v τ))
-   --------------------------------------------- "23"
+   --------------------------------------------- "stmt 23: while false condition"
    (stmt G M (while (a τ) s)
          Normal M)]
 
@@ -572,8 +572,8 @@
    (side-condition (is-true v τ))
    (stmt G M s
          out M_1)
-   (side-condition (is-break-or-return out))
-   --------------------------------------------- "24"
+   (side-condition (is-break-or-return? out))
+   --------------------------------------------- "stmt 24: while break or return"
    (stmt G M (while (a τ) s)
          (loop-exit-out-update out) M_1)]
 
@@ -585,7 +585,7 @@
          Normal M_1)
    (stmt G M_1 (while (a τ) s)
          out M_2)
-   --------------------------------------------- "25a"
+   --------------------------------------------- "stmt 25a: while next iteration normal"
    (stmt G M (while (a τ) s)
          out M_2)]
 
@@ -597,7 +597,7 @@
          Continue M_1)
    (stmt G M_1 (while (a τ) s)
          out M_2)
-   --------------------------------------------- "25b"
+   --------------------------------------------- "stmt 25b: while next iteration continue"
    (stmt G M (while (a τ) s)
          out M_2)]
 
@@ -607,7 +607,7 @@
    (side-condition (is-not-skip? s_init))
    (stmt G M_1 (for skip a s_incr s_body)
          out M_2)
-   --------------------------------------------- "26"
+   --------------------------------------------- "stmt 26: enter for loop"
    (stmt G M (for s_init a s_incr s_body)
          out M_2)]
 
@@ -615,7 +615,7 @@
   [(rval G M (a τ)
          v)
    (side-condition (is-false v τ))
-   --------------------------------------------- "27"
+   --------------------------------------------- "stmt 27: for false condition"
    (stmt G M (for skip (a τ) s_incr s_body)
          Normal M)]
 
@@ -626,8 +626,8 @@
    (side-condition (is-true v τ))
    (stmt G M s_body
          out M_1)
-   (side-condition (is-break-or-return out))
-   --------------------------------------------- "28"
+   (side-condition (is-break-or-return? out))
+   --------------------------------------------- "stmt 28: for break or return"
    (stmt G M (for skip (a τ) s_incr s_body)
          (loop-exit-out-update out) M_1)]
 
@@ -641,7 +641,7 @@
          Normal M_2)
    (stmt G M_2 (for skip (a τ) s_incr s_body)
          out M_3)
-   --------------------------------------------- "29a"
+   --------------------------------------------- "stmt 29a: for next iteration normal"
    (stmt G M (for skip (a τ) s_incr s_body)
          out M_3)]
 
@@ -655,7 +655,7 @@
          Normal M_2)
    (stmt G M_2 (for skip (a τ) s_2 s_3)
          out M_3)
-   --------------------------------------------- "29b"
+   --------------------------------------------- "stmt 29b: for next iteration continue"
    (stmt G M (for skip (a τ) s_2 s_3)
          out M_3)])
 
@@ -669,6 +669,6 @@
   ; evaluate entire program
   [(stmt (get-G (init () () (dcl ...))) (get-M (init () () (dcl ...))) s
          out M)
-   --------------------------------------------- "40"
+   --------------------------------------------- "prog 40: evaluate program"
    (prog (dcl ... s)
          (convert-out-to-return out) M)])

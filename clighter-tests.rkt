@@ -838,6 +838,28 @@
  exn:fail?
  (λ () (term (loop-exit-out-update Normal))))
 
+; is-break-or-return
+(test-equal?
+ "is-break-or-return? Break"
+ (term (is-break-or-return? Break))
+ #true)
+(test-equal?
+ "is-break-or-return? Return"
+ (term (is-break-or-return? Return))
+ #true)
+(test-equal?
+ "is-break-or-return? (Return v)"
+ (term (is-break-or-return? (Return (int 55))))
+ #true)
+(test-equal?
+ "is-break-or-return? Normal"
+ (term (is-break-or-return? Normal))
+ #false)
+(test-equal?
+ "is-break-or-return? Continue"
+ (term (is-break-or-return? Continue))
+ #false)
+
 ; is-not-normal?
 (test-equal?
  "is-not-normal? non-Normal"
@@ -1459,3 +1481,50 @@
                            ((0 (0 (int 94))) (1 (0 (ptr (1 8))) (8 (int 0))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
 ; prog 40
+(test-judgment-holds (prog ((int aaa)
+                            (int bbb)
+                            (((= (aaa int) (4 int))
+                              (= (bbb int) (5 int)))
+                             (return ((+ (aaa int) (bbb int)) int))))
+                           (int 9)
+                           ((0 (0 (int 4))) (1 (0 (int 5))))))
+(test-judgment-holds (prog ((int aaa)
+                            (int bbb)
+                            (((= (aaa int) (4 int))
+                              (= (bbb int) (1 int)))
+                             (for skip
+                               (aaa int)
+                               (= (aaa int)
+                                  ((- (aaa int) (1 int)) int))
+                               (= (bbb int)
+                                  ((* (bbb int) (2 int)) int)))))
+                           undef
+                           ((0 (0 (int 0))) (1 (0 (int 16))))))
+(test-judgment-holds (prog ((int aaa)
+                            (int bbb)
+                            (int ccc)
+                            (((((= (aaa int) (2 int))
+                               (= (bbb int) (2 int)))
+                              (= (ccc int) (0 int)))
+                             (for skip
+                               (aaa int)
+                               (= (aaa int)
+                                  ((- (aaa int) (1 int)) int))
+                               ((for skip
+                                 (bbb int)
+                                 (= (bbb int)
+                                    ((- (bbb int) (1 int)) int))
+                                 (= (ccc int)
+                                    ((+ (ccc int) ((* (bbb int) (aaa int)) int)) int)))
+                                (= (bbb int)
+                                   (2 int)))))
+                             (return (ccc int))))
+                           (int 9)
+                           ((0 (0 (int 0))) (1 (0 (int 2))) (2 (0 (int 9))))))
+(test-judgment-holds (prog (((pointer int) aaa)
+                            ((struct xyz (ii int) (jj int) (kk int)) bbb)
+                            (((= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void)))
+                              (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int)))
+                             (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))))
+                           (int 5)
+                           ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5))))))
