@@ -1528,3 +1528,20 @@
                              (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))))
                            (int 5)
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5))))))
+
+; prog 40 (using parse-statement-sequence)
+(define (parse-statement-sequence list-of-stmts parsed-nested-stmts)
+  (if (empty? list-of-stmts)
+      parsed-nested-stmts
+      (parse-statement-sequence (rest list-of-stmts)
+                                (term (,parsed-nested-stmts
+                                       ,(first list-of-stmts))))))
+
+(test-judgment-holds (prog (((pointer int) aaa)
+                            ((struct xyz (ii int) (jj int) (kk int)) bbb)
+                            ,(parse-statement-sequence (list (term (= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void))))
+                                                             (term (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int)))
+                                                             (term (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))))
+                                                       (term skip)))
+                           (int 5)
+                           ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5))))))
