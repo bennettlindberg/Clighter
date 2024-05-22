@@ -663,12 +663,12 @@
 ;; JUDGEMENT : ENTIRE PROGRAMS ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-judgment-form Clighter
-  #:mode (prog I O O)
-  #:contract (prog P v M)
+  #:mode (run I O)
+  #:contract (run P (v M))
 
-  ; evaluate entire program
+  ; evaluate entire program (as I O relation)
   [(stmt (get-G (init () () (dcl ...))) (get-M (init () () (dcl ...))) s
          out M)
-   --------------------------------------------- "prog 40: evaluate program"
-   (prog (dcl ... s)
-         (convert-out-to-return out) M)])
+   --------------------------------------------- "run 40: evaluate program"
+   (run (dcl ... s)
+         ((convert-out-to-return out) M))])
