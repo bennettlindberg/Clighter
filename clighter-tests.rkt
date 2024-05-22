@@ -1,7 +1,8 @@
 #lang racket
 
 (require redex)
-(require "./clighter.rkt")
+(require "clighter.rkt")
+(require "utils.rkt")
 (require rackunit)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11,10 +12,13 @@
 (test-match Clighter n (term 0))
 (test-match Clighter n (term 3))
 (test-match Clighter n (term -1))
+(test-no-match Clighter n (term 10.0))
 
 ; id
 (test-match Clighter id (term u))
 (test-match Clighter id (term var))
+(test-no-match Clighter id (term 10))
+(test-no-match Clighter id (term void))
 
 ; τ
 (test-match Clighter τ (term int))
@@ -26,6 +30,7 @@
 (test-match Clighter τ (term (struct xyz (var1 int) (var2 (pointer int)))))
 (test-match Clighter τ (term (union abc)))
 (test-match Clighter τ (term (union xyz (var1 int) (var2 (pointer int)))))
+(test-no-match Clighter τ (term (union IntOptional (void none) (int some))))
 
 ; φ
 (test-match Clighter φ (term (hi int)))
@@ -39,7 +44,7 @@
 (test-match Clighter a (term (- (8 int))))
 (test-match Clighter a (term (~ (o (pointer void)))))
 (test-match Clighter a (term (<= (100 int) (j void))))
-(test-match Clighter a (term (\| (o (pointer void)) (7 (union temp (w int) (x int) (y void))))))
+(test-match Clighter a (term (¦ (o (pointer void)) (7 (union temp (w int) (x int) (y void))))))
 (test-match Clighter a (term (* (h int))))
 (test-match Clighter a (term (* (o (pointer void)))))
 (test-match Clighter a (term (@ (h (struct abc (y int))) y)))
@@ -47,6 +52,20 @@
 (test-match Clighter a (term (& (h int))))
 (test-match Clighter a (term (& (o (pointer void)))))
 (test-match Clighter a (term (? ((== (5 int) (10 int)) void) (xyz (array int 10)) (hjk void))))
+
+; a+τ
+(test-match Clighter a+τ (term (id int)))
+(test-match Clighter a+τ (term ((sizeof (3 int)) int)))
+(test-match Clighter a+τ (term ((sizeof (3 (array int 3))) int)))
+(test-match Clighter a+τ (term ((* (var int)) (pointer int))))
+(test-match Clighter a+τ (term ((* (var (pointer int))) (pointer (pointer int)))))
+(test-match Clighter a+τ (term (oint (union OptionalInt (none void) (some int)))))
+(test-match Clighter a+τ (term ((@ (oint (union OptionalInt (none void) (some int))) some) int)))
+(test-match Clighter a+τ (term ((@ (oint (union OptionalInt (none void) (some int))) maybe) void)))
+(test-match Clighter a+τ (term ((& (oint (union OptionalInt (none void) (some int)))) (pointer void))))
+(test-match Clighter a+τ (term ((& (oint (union OptionalInt (none void) (some int)))) (pointer void))))
+(test-equal #t (redex-match? Clighter a+τ (term ((? (1 int) (1 int) (0 int)) int))))
+(test-equal #t (redex-match? Clighter a+τ (term ((? (0 int) (some (array int 1)) (0 void)) void))))
 
 ; uop
 (test-match Clighter uop (term -))
@@ -62,7 +81,7 @@
 (test-match Clighter bop (term <<))
 (test-match Clighter bop (term >>))
 (test-match Clighter bop (term &))
-(test-match Clighter bop (term \|))
+(test-match Clighter bop (term ¦))
 (test-match Clighter bop (term ^))
 (test-match Clighter bop (term <))
 (test-match Clighter bop (term <=))
@@ -70,6 +89,29 @@
 (test-match Clighter bop (term >=))
 (test-match Clighter bop (term ==))
 (test-match Clighter bop (term !=))
+
+; *op+τ
+(test-match Clighter a+τ (term ((- (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((- (var1 int)) int)))
+(test-no-match Clighter a+τ (term ((~ (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((~ (var1 int)) int)))
+(test-match Clighter a+τ (term ((! (var1 int)) int)))
+(test-match Clighter a+τ (term ((! (var1 (pointer int))) int)))
+(test-match Clighter a+τ (term ((+ (var1 int) (var2 int)) int)))
+(test-no-match Clighter a+τ (term ((+ (var1 int)) int)))
+(test-match Clighter a+τ (term ((* (var1 int) (var2 int)) (pointer int))))
+(test-match Clighter a+τ (term ((/ (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((% (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((<< ((sizeof (0 int)) int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((>> (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((< (var1 int) (0 void)) int)))
+(test-match Clighter a+τ (term ((> (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((<= (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((>= (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((== (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((& (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((^ (var1 int) (var2 int)) int)))
+(test-match Clighter a+τ (term ((¦ (var1 int) (var2 int)) int)))
 
 ; s
 (test-match Clighter s (term skip))
@@ -82,9 +124,29 @@
 (test-match Clighter s (term (if (10 int) continue break)))
 (test-match Clighter s (term (if ((* (p (pointer int))) int) (return (8 int)) (return (9 int)))))
 (test-match Clighter s (term (while (1 int) (= (h int) (100 int)))))
-(test-match Clighter s (term (while ((> (aaa int) (bbb int)) (pointer void)) ((= (arr (array int 10)) (pntr (pointer (union abc)))) continue))))
+(test-match Clighter s (term (while ((> (aaa int) (bbb int)) (pointer void))
+                                    ((= (arr (array int 10)) (pntr (pointer (union abc)))) continue))))
 (test-match Clighter s (term (for skip (1 int) (= (h int) (100 int)) skip)))
-(test-match Clighter s (term (for (= (h int) (100 int)) ((> (aaa int) (bbb int)) (pointer void)) ((= (arr (array int 10)) (pntr (pointer (union abc)))) continue) (= (h int) ((+ (1 int) (100 int)) int)))))
+(test-match Clighter s (term (for (= (h int) (100 int))
+                               ((> (aaa int) (bbb int)) (pointer void))
+                               ((= (arr (array int 10)) (pntr (pointer (union abc)))) continue)
+                               (= (h int) ((+ (1 int) (100 int)) int)))))
+(test-match Clighter s (term (for (= (i int) (0 int))
+                               ((< (i int) (10 int)) int)
+                               (= (i int) ((+ (i int) (1 int)) int))
+                               skip)))
+(test-match Clighter s (term (for (= (i int) (0 int))
+                               ((< (i int) (10 int)) int)
+                               (= (i int) ((+ (i int) (1 int)) int))
+                               (if (var1 int) skip skip))))
+(test-match Clighter s (term (for (= (i int) (0 int))
+                               ((< (i int) (10 int)) int)
+                               (= (i int) ((+ (i int) (1 int)) int))
+                               (if (var1 int)
+                                   break
+                                   (if (var2 int)
+                                       continue
+                                       (return (0 int)))))))
 (test-match Clighter s (term break))
 (test-match Clighter s (term continue))
 (test-match Clighter s (term return))
@@ -95,6 +157,9 @@
 (test-match Clighter dcl (term (int aaa)))
 (test-match Clighter dcl (term ((struct abc (x int) (y int)) bbb)))
 (test-match Clighter dcl (term ((array int 700) eee)))
+(test-match Clighter dcl (term ((pointer int) pint)))
+(test-match Clighter dcl (term ((pointer (array int 3)) pint3)))
+(test-no-match Clighter dcl (term (int i (10 int))))
 
 ; P
 (test-match Clighter P (term (skip)))
@@ -116,6 +181,7 @@
 (test-match Clighter l (term (6 100)))
 (test-match Clighter l (term (0 0)))
 (test-match Clighter l (term (10 2)))
+(test-no-match Clighter l (term (-1 -1)))
 
 ; v
 (test-match Clighter v (term (int 10)))
@@ -157,7 +223,12 @@
 ; M
 (test-match Clighter M (term ()))
 (test-match Clighter M (term ((0) (1) (2))))
-(test-match Clighter M (term ((4 (23 undef) (43 undef) (0 (ptr (0 0)))) (6 (4 (int 10)) (0 (ptr (0 0)))))))
+(test-match Clighter M (term ((4 (23 undef) (43 undef) (0 (ptr (0 0))))
+                              (6 (4 (int 10)) (0 (ptr (0 0)))))))
+(test-match Clighter M (term ((0)
+                              (1 (0 (int 3)))
+                              (2 (0 (int 3)) (1 (int 3)))
+                              (3 (0 (ptr (0 0))) (1 (int 3)) (2 undef)) )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TEST HELPER META-FUNCTIONS ;;
@@ -235,10 +306,20 @@
  "size-of union"
  (term (size-of (union aaa (bbb int) (eee (struct hjk (lll (pointer int)) (mmm int))) (ccc (pointer int)))))
  (term 12))
+(test-equal?
+ "size-of union"
+ (term (size-of (union dummyu
+                      (s1 (struct ds1 (x int) (y int) (z int)))
+                      (s2 (struct ds2 (x int) (y int))))))
+ (term 12))
 (test-exn
  "size-of void"
  exn:fail?
  (λ () (term (size-of void))))
+(test-exn
+ "size-of nested void"
+ exn:fail?
+ (λ () (term (size-of (union OptionalInt (none void) (some int) (many (array int 2)))))))
 
 ; field-offset
 (test-equal?
@@ -281,6 +362,17 @@
  "field-offset existing id non-zero initial offset"
  (term (field-offset ddd ((aaa (struct hjk (yyy int) (xxx int))) (bbb (pointer int)) (ccc (array (pointer int) 10)) (ddd int)) 100))
  (term 196))
+(test-equal?
+ "field-offset duplicate nested id"
+ (term (field-offset z ((x (array (union dummyu
+                                    (s1 (struct dummys1 (x int) (y int) (z int)))
+                                    (s2 (struct dummys2 (x int) (y int))))
+                            3))
+                        (y int)
+                        (z (pointer int))
+                        )
+        4))
+ (term 44))
 (test-exn
  "field-offset non-existing id"
  exn:fail?
@@ -673,11 +765,11 @@
  (term (int 8)))
 (test-equal?
  "eval-binop integer bitwise or"
- (term (eval-binop \| (int 4) int (int 5) int))
+ (term (eval-binop ¦ (int 4) int (int 5) int))
  (term (int 5)))
 (test-equal?
  "eval-binop integer bitwise or"
- (term (eval-binop \| (int 10) int (int 60) int))
+ (term (eval-binop ¦ (int 10) int (int 60) int))
  (term (int 62)))
 (test-equal?
  "eval-binop integer bitwise xor"
@@ -991,11 +1083,11 @@
 
 ; rval 5
 (test-judgment-holds (rval () () (100 int)
-                            (int 100)))
+                           (int 100)))
 (test-judgment-holds (rval ((abc 1) (bbb 2)) ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)))) (100 int)
-                            (int 100)))
+                           (int 100)))
 (test-judgment-holds (rval ((abc 1) (bbb 2)) ((0 (0 (ptr (0 0)))) (1 (0 (int 4)) (4 (int 5)))) (-5 int)
-                            (int -5)))
+                           (int -5)))
 
 ; rval 7
 (test-judgment-holds (rval () () ((sizeof (10 int)) int) (int 4)))
@@ -1078,7 +1170,7 @@
 
 ; rval 12
 (test-judgment-holds (rval () () ((? (3 int) (10 int) (20 int)) int)
-                            (int 10)))
+                           (int 10)))
 (test-judgment-holds (rval ((ddd 1) (bbb 2) (ccc 3) (abc 4))
                            ((0 (0 (ptr (0 0))))
                             (1 (0 (int 4))
@@ -1174,45 +1266,45 @@
 (test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            ((= ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) aa) int)
-                              ((* (bbb (pointer int))) int))
+                               ((* (bbb (pointer int))) int))
                             (= (aaa int)
-                              (30 int)))
+                               (30 int)))
                            Normal
                            ((0 (0 (int 30))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 99)) (4 (ptr (2 0)))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            ((= ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) bb) (pointer int))
-                              (bbb (pointer int)))
+                               (bbb (pointer int)))
                             (= (aaa int)
-                              ((* ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) bb) (pointer int))) int)))
+                               ((* ((@ (ccc (struct xyz (aa int) (bb (pointer int)))) bb) (pointer int))) int)))
                            Normal
                            ((0 (0 (int 99))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (1 8)))))))
 (test-judgment-holds (stmt ((aaa 0))
                            ((0 (0 (int 4))))
                            (skip
                             (= (aaa int)
-                              (30 int)))
+                               (30 int)))
                            Normal
                            ((0 (0 (int 30))))))
 (test-judgment-holds (stmt ((aaa 0))
                            ((0 (0 (int 4))))
                            ((= (aaa int)
-                              (30 int))
+                               (30 int))
                             break)
                            Break
                            ((0 (0 (int 30))))))
 (test-judgment-holds (stmt ((aaa 0))
                            ((0 (0 (int 4))))
                            ((= (aaa int)
-                              (30 int))
+                               (30 int))
                             (= (aaa int)
-                              (40 int)))
+                               (40 int)))
                            Normal
                            ((0 (0 (int 40))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 8))))
                            ((= ((* (bbb (pointer int))) int)
-                              (30 int))
+                               (30 int))
                             (return ((* (bbb (pointer int))) int)))
                            (Return (int 30))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 30))))))
@@ -1221,26 +1313,26 @@
 (test-judgment-holds (stmt ((aaa 0))
                            ((0 (0 (int 4))))
                            (((= (aaa int)
-                              (30 int))
-                            break)
+                                (30 int))
+                             break)
                             (= (aaa int)
-                              (40 int)))
+                               (40 int)))
                            Break
                            ((0 (0 (int 30))))))
 (test-judgment-holds (stmt ((aaa 0))
                            ((0 (0 (int 4))))
                            (break
                             (= (aaa int)
-                              (40 int)))
+                               (40 int)))
                            Break
                            ((0 (0 (int 4))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 8))))
                            (((= ((* (bbb (pointer int))) int)
-                              (30 int))
-                            (return ((* (bbb (pointer int))) int)))
+                                (30 int))
+                             (return ((* (bbb (pointer int))) int)))
                             (= (aaa int)
-                              (40 int)))
+                               (40 int)))
                            (Return (int 30))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 30))))))
 
@@ -1258,10 +1350,10 @@
                            ((0 (0 (int 4))) (1 (0 (ptr (0 0)))))
                            (if ((* (bbb (pointer int))) int)
                                ((= (aaa int)
-                                  (30 int))
+                                   (30 int))
                                 break)
                                ((= (aaa int)
-                                  (40 int))
+                                   (40 int))
                                 continue))
                            Break
                            ((0 (0 (int 30))) (1 (0 (ptr (0 0)))))))
@@ -1280,10 +1372,10 @@
                            ((0 (0 (int 0))) (1 (0 (ptr (0 0)))))
                            (if ((* (bbb (pointer int))) int)
                                ((= (aaa int)
-                                  (30 int))
+                                   (30 int))
                                 break)
                                ((= (aaa int)
-                                  (40 int))
+                                   (40 int))
                                 continue))
                            Continue
                            ((0 (0 (int 40))) (1 (0 (ptr (0 0)))))))
@@ -1309,7 +1401,7 @@
                            ((0 (0 (int 4))))
                            (while ((- (10 int) (11 int)) int)
                                   ((= (aaa int)
-                                     (30 int))
+                                      (30 int))
                                    break))
                            Normal
                            ((0 (0 (int 30))))))
@@ -1317,7 +1409,7 @@
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            (while ((* (bbb (pointer int))) int)
                                   ((= (aaa int)
-                                     (30 int))
+                                      (30 int))
                                    return))
                            Return
                            ((0 (0 (int 30))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
@@ -1334,7 +1426,7 @@
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            (while (aaa int)
                                   (= (aaa int)
-                                      ((- (aaa int) (1 int)) int)))
+                                     ((- (aaa int) (1 int)) int)))
                            Normal
                            ((0 (0 (int 0))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))))
 
@@ -1343,7 +1435,7 @@
                            ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
                            (while ((* (bbb (pointer int))) int)
                                   ((= (bbb (pointer int))
-                                     ((+ (1 int) (bbb (pointer int))) (pointer int)))
+                                      ((+ (1 int) (bbb (pointer int))) (pointer int)))
                                    continue))
                            Normal
                            ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 1)))))))
@@ -1366,7 +1458,7 @@
                              (= (aaa int)
                                 ((- (aaa int) (1 int)) int))
                              (= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
-                                 (aaa int)))
+                                (aaa int)))
                            Normal
                            ((0 (0 (int 0)) (4 (int 1))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
@@ -1421,7 +1513,7 @@
                              (= ((* (bbb (pointer int))) int)
                                 ((+ ((* (bbb (pointer int))) int) (1 int)) int))
                              ((= (aaa int)
-                                ((+ (10 int) (aaa int)) int))
+                                 ((+ (10 int) (aaa int)) int))
                               (if ((== (44 int) (aaa int)) int)
                                   (return (aaa int))
                                   continue)))
@@ -1447,7 +1539,7 @@
                              (= ((* (bbb (pointer int))) int)
                                 ((+ ((* (bbb (pointer int))) int) (1 int)) int))
                              ((= (aaa int)
-                                ((+ (10 int) (aaa int)) int))
+                                 ((+ (10 int) (aaa int)) int))
                               (if (0 int)
                                   continue
                                   skip)))
@@ -1473,7 +1565,7 @@
                              (= ((* (bbb (pointer int))) int)
                                 ((+ ((* (bbb (pointer int))) int) (1 int)) int))
                              ((= (aaa int)
-                                ((+ (10 int) (aaa int)) int))
+                                 ((+ (10 int) (aaa int)) int))
                               (if (220 int)
                                   continue
                                   skip)))
@@ -1504,20 +1596,20 @@
                             (int bbb)
                             (int ccc)
                             (((((= (aaa int) (2 int))
-                               (= (bbb int) (2 int)))
-                              (= (ccc int) (0 int)))
-                             (for skip
-                               (aaa int)
-                               (= (aaa int)
-                                  ((- (aaa int) (1 int)) int))
-                               ((for skip
-                                 (bbb int)
+                                (= (bbb int) (2 int)))
+                               (= (ccc int) (0 int)))
+                              (for skip
+                                (aaa int)
+                                (= (aaa int)
+                                   ((- (aaa int) (1 int)) int))
+                                ((for skip
+                                   (bbb int)
+                                   (= (bbb int)
+                                      ((- (bbb int) (1 int)) int))
+                                   (= (ccc int)
+                                      ((+ (ccc int) ((* (bbb int) (aaa int)) int)) int)))
                                  (= (bbb int)
-                                    ((- (bbb int) (1 int)) int))
-                                 (= (ccc int)
-                                    ((+ (ccc int) ((* (bbb int) (aaa int)) int)) int)))
-                                (= (bbb int)
-                                   (2 int)))))
+                                    (2 int)))))
                              (return (ccc int))))
                            (int 9)
                            ((0 (0 (int 0))) (1 (0 (int 2))) (2 (0 (int 9))))))
@@ -1530,18 +1622,12 @@
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5))))))
 
 ; prog 40 (using parse-statement-sequence)
-(define (parse-statement-sequence list-of-stmts parsed-nested-stmts)
-  (if (empty? list-of-stmts)
-      parsed-nested-stmts
-      (parse-statement-sequence (rest list-of-stmts)
-                                (term (,parsed-nested-stmts
-                                       ,(first list-of-stmts))))))
-
 (test-judgment-holds (prog (((pointer int) aaa)
                             ((struct xyz (ii int) (jj int) (kk int)) bbb)
-                            ,(parse-statement-sequence (list (term (= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void))))
-                                                             (term (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int)))
-                                                             (term (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))))
-                                                       (term skip)))
+                            ,(stmts->seq+term [
+                              (= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void)))
+                              (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int))
+                              (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))
+                            ]))
                            (int 5)
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5))))))

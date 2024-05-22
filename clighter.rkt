@@ -31,7 +31,7 @@
                   (? a+τ a+τ a+τ))
   (uop        ::= - ~ !)
   (bop        ::= + - * / %
-                  << >> & \| ^
+                  << >> & ¦ ^
                   < <= > >= == !=)
 
   ; Statements
@@ -279,7 +279,7 @@
   [(eval-binop << (int n_1) int (int n_2) int) (int ,(arithmetic-shift (term n_1) (term n_2)))]
   [(eval-binop >> (int n_1) int (int n_2) int) (int ,(arithmetic-shift (term n_1) (- (term n_2))))]
   [(eval-binop & (int n_1) int (int n_2) int) (int ,(bitwise-and (term n_1) (term n_2)))]
-  [(eval-binop \| (int n_1) int (int n_2) int) (int ,(bitwise-ior (term n_1) (term n_2)))]
+  [(eval-binop ¦ (int n_1) int (int n_2) int) (int ,(bitwise-ior (term n_1) (term n_2)))]
   [(eval-binop ^ (int n_1) int (int n_2) int) (int ,(bitwise-xor (term n_1) (term n_2)))]
   ; int - relational
   [(eval-binop < (int n_1) int (int n_2) int) (int ,(boolean-to-int (< (term n_1) (term n_2))))]
