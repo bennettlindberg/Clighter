@@ -838,18 +838,18 @@
 (test-equal?
  "eval-binop pointer arithmetic addition"
  (term (eval-binop + (ptr (0 0)) (pointer int) (int 10) int))
- (term (ptr (0 10))))
+ (term (ptr (0 40))))
 (test-equal?
  "eval-binop pointer arithmetic addition"
  (term (eval-binop + (ptr (3 8)) (pointer int) (int 90) int))
- (term (ptr (3 98))))
+ (term (ptr (3 368))))
 (test-equal?
  "eval-binop pointer arithmetic subtraction"
- (term (eval-binop - (ptr (0 11)) (pointer int) (int 10) int))
+ (term (eval-binop - (ptr (0 41)) (pointer int) (int 10) int))
  (term (ptr (0 1))))
 (test-equal?
  "eval-binop pointer arithmetic subtraction"
- (term (eval-binop - (ptr (3 8)) (pointer int) (int 3) int))
+ (term (eval-binop - (ptr (3 17)) (pointer int) (int 3) int))
  (term (ptr (3 5))))
 (test-exn
  "eval-binop wrong type"
@@ -1238,7 +1238,7 @@
 (test-judgment-holds (stmt () () (return (50 int)) (Return (int 50)) ()))
 (test-judgment-holds (stmt ((abc 1) (bbb 2))
                            ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))
-                           (return ((+ (4 int) ((& (abc (struct xyz (aa int) (bb int)))) (pointer int))) (pointer int)))
+                           (return ((+ (1 int) ((& (abc (struct xyz (aa int) (bb int)))) (pointer int))) (pointer int)))
                            (Return (ptr (1 4)))
                            ((0 (0 (ptr (0 0)))) (1 (0 (int 3)) (4 (int 10))))))
 
@@ -1416,12 +1416,12 @@
 
 ; stmt 25a
 (test-judgment-holds (stmt ((aaa 0) (bbb 1))
-                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
+                           ((0 (0 (int 1)) (4 (int 0))) (1 (0 (ptr (0 0)))))
                            (while ((* (bbb (pointer int))) int)
                                   (= (bbb (pointer int))
                                      ((+ (1 int) (bbb (pointer int))) (pointer int))))
                            Normal
-                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 1)))))))
+                           ((0 (0 (int 1)) (4 (int 0))) (1 (0 (ptr (0 4)))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            (while (aaa int)
@@ -1432,13 +1432,13 @@
 
 ; stmt 25b
 (test-judgment-holds (stmt ((aaa 0) (bbb 1))
-                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 0)))))
+                           ((0 (0 (int 1)) (4 (int 0))) (1 (0 (ptr (0 0)))))
                            (while ((* (bbb (pointer int))) int)
                                   ((= (bbb (pointer int))
                                       ((+ (1 int) (bbb (pointer int))) (pointer int)))
                                    continue))
                            Normal
-                           ((0 (0 (int 1)) (1 (int 0))) (1 (0 (ptr (0 1)))))))
+                           ((0 (0 (int 1)) (4 (int 0))) (1 (0 (ptr (0 4)))))))
 (test-judgment-holds (stmt ((aaa 0) (bbb 1) (ccc 2))
                            ((0 (0 (int 4))) (1 (0 (ptr (1 8))) (8 (int 99))) (2 (0 (int 1)) (4 (ptr (2 0)))))
                            (while (aaa int)
@@ -1457,7 +1457,7 @@
                              (aaa int)
                              (= (aaa int)
                                 ((- (aaa int) (1 int)) int))
-                             (= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                             (= ((* ((+ ((& (aaa int)) (pointer int)) (1 int)) (pointer int))) int)
                                 (aaa int)))
                            Normal
                            ((0 (0 (int 0)) (4 (int 1))))))
@@ -1501,7 +1501,7 @@
                              (aaa int)
                              (= (aaa int)
                                 ((- (aaa int) (1 int)) int))
-                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (1 int)) (pointer int))) int)
                                  (aaa int))
                               break))
                            Normal
@@ -1527,7 +1527,7 @@
                              (aaa int)
                              (= (aaa int)
                                 ((- (aaa int) (1 int)) int))
-                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (1 int)) (pointer int))) int)
                                  (aaa int))
                               skip))
                            Normal
@@ -1553,7 +1553,7 @@
                              (aaa int)
                              (= (aaa int)
                                 ((- (aaa int) (1 int)) int))
-                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (4 int)) (pointer int))) int)
+                             ((= ((* ((+ ((& (aaa int)) (pointer int)) (1 int)) (pointer int))) int)
                                  (aaa int))
                               continue))
                            Normal
@@ -1617,7 +1617,7 @@
                             ((struct xyz (ii int) (jj int) (kk int)) bbb)
                             (((= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void)))
                               (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int)))
-                             (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))))
+                             (return ((* ((+ (aaa (pointer int)) (2 int)) int)) int))))
                            ((int 5)
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5)))))))
 
@@ -1627,7 +1627,7 @@
                             ,(stmts->seq+term [
                               (= (aaa (pointer int)) ((& (bbb (struct xyz (ii int) (jj int) (kk int)))) (pointer void)))
                               (= ((@ (bbb (struct xyz (ii int) (jj int) (kk int))) kk) int) (5 int))
-                              (return ((* ((+ (aaa (pointer int)) (8 int)) int)) int))
+                              (return ((* ((+ (aaa (pointer int)) (2 int)) int)) int))
                             ]))
                            ((int 5)
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5)))))))
@@ -1639,7 +1639,7 @@
                                  (return (0 int))
                               ]))
                               ((int 0)
-                              (0 (0 undef) (4 (int 3))) (1 (0 (ptr (0 0)))))
+                              ((0 (0 undef) (4 (int 3))) (1 (0 (ptr (0 0))))))
                            ))
 
 (test-judgment-not-hold (run (((array int 1) arr) ((pointer int) arrp)

@@ -289,9 +289,9 @@
   [(eval-binop == (int n_1) int (int n_2) int) (int ,(boolean-to-int (equal? (term n_1) (term n_2))))]
   [(eval-binop != (int n_1) int (int n_2) int) (int ,(boolean-to-int (not (equal? (term n_1) (term n_2)))))]
   ; pointer - arithmetic
-  [(eval-binop + (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(+ (term δ) (term n))))]
-  [(eval-binop + (int n) int (ptr (b δ)) (pointer τ)) (ptr (b ,(+ (term δ) (term n))))]
-  [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (term n))))]
+  [(eval-binop + (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(+ (term δ) (* (term (size-of τ)) (term n)))))]
+  [(eval-binop + (int n) int (ptr (b δ)) (pointer τ)) (ptr (b ,(+ (term δ) (* (term (size-of τ)) (term n)))))]
+  [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (* (term (size-of τ)) (term n)))))]
   ; else
   [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term τ_1))])
 
