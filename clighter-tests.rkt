@@ -1631,3 +1631,23 @@
                             ]))
                            ((int 5)
                            ((0 (0 (ptr (1 0)))) (1 (0 undef) (4 undef) (8 (int 5)))))))
+
+(test-judgment-holds (run (((array int 2) arr) ((pointer int) arrp)
+                              ,(stmts->seq+term [
+                                 (= (arrp (pointer (array int 2))) ((& (arr (array int 2))) (pointer (array int 2))))
+                                 (= ((* ((+ (arrp (pointer int)) (1 int)) (pointer int))) int) (3 int))
+                                 (return (0 int))
+                              ]))
+                              ((int 0)
+                              (0 (0 undef) (4 (int 3))) (1 (0 (ptr (0 0)))))
+                           ))
+
+(test-judgment-not-hold (run (((array int 1) arr) ((pointer int) arrp)
+                              ,(stmts->seq+term [
+                                 (= (arrp (pointer (array int 1))) ((& (arr (array int 1))) (pointer (array int 1))))
+                                 (= ((* ((+ (arrp (pointer int)) (1 int)) (pointer int))) int) (3 int))
+                                 (return (0 int))
+                              ]))
+                              ((int 0)
+                              (0 (0 undef) (4 (int 3))) (1 (0 (ptr (0 0)))))
+                           ))

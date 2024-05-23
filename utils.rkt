@@ -16,3 +16,8 @@
      #'(term elem)]
     [(_ [first rest ...])
      #'(term (first ,(stmts->seq+term [rest ...])))]))
+
+(define-syntax (test-judgment-not-hold stx)
+  (syntax-case stx ()
+    [(_ j)
+     #'(test-equal #f (judgment-holds j))]))
