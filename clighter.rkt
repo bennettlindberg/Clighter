@@ -293,7 +293,7 @@
   [(eval-binop + (int n) int (ptr (b δ)) (pointer τ)) (ptr (b ,(+ (term δ) (* (term (size-of τ)) (term n)))))]
   [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (* (term (size-of τ)) (term n)))))]
   ; else
-  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term τ_1))])
+  [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term (v_1 τ_1 v_2 τ_2)))])
 
 ; boolean-to-int
 ; Returns the integer representation of a boolean value
@@ -605,10 +605,10 @@
   [(stmt G M s_init
          Normal M_1)
    (side-condition (is-not-skip? s_init))
-   (stmt G M_1 (for skip a s_incr s_body)
+   (stmt G M_1 (for skip (a τ) s_incr s_body)
          out M_2)
    --------------------------------------------- "stmt 26: enter for loop"
-   (stmt G M (for s_init a s_incr s_body)
+   (stmt G M (for s_init (a τ) s_incr s_body)
          out M_2)]
 
   ; exit for loop when condition "a" is false
