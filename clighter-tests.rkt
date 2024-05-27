@@ -1777,7 +1777,7 @@
                               (= (prev (pointer void)) ((& (dummy ,NodeT)) (pointer void)))
                               (= (curr (pointer void)) ((& (n0 ,NodeT)) (pointer void)))
                               ; Remove Node
-                              (while ((!= ((@ ((* (curr (pointer ,NodeT))) ,NodeT) next) (pointer void)) (nullptr (pointer void))) int)
+                              (while ((!= (curr (pointer void)) (nullptr (pointer void))) int)
                                      ,(stmts->seq+term [
                                         (if ((== (toRemove int) ((@ ((* (curr (pointer ,NodeT))) ,NodeT) val) int)) int)
                                             (= ((@ ((* (prev (pointer ,NodeT))) ,NodeT) next) (pointer void))
@@ -1803,8 +1803,8 @@
                              (0 (int 4))
                              (4 (ptr (8 0))))
                             (5 (0 (int 3)))
-                            (6 (0 (ptr (2 0))))
-                            (7 (0 (ptr (4 0))))
+                            (6 (0 (ptr (4 0))))
+                            (7 (0 (ptr (8 0))))
                             (8 (0 (ptr (8 0))))))))
 
 (test-results)
