@@ -292,6 +292,15 @@
   [(eval-binop + (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(+ (term δ) (* (term (size-of τ)) (term n)))))]
   [(eval-binop + (int n) int (ptr (b δ)) (pointer τ)) (ptr (b ,(+ (term δ) (* (term (size-of τ)) (term n)))))]
   [(eval-binop - (ptr (b δ)) (pointer τ) (int n) int) (ptr (b ,(- (term δ) (* (term (size-of τ)) (term n)))))]
+  
+  [(eval-binop == (ptr (b_1 δ_1)) (pointer τ_1) (ptr (b_2 δ_2)) (pointer τ_2)) (int ,(boolean-to-int (and (equal? (term b_1) (term b_2)) (equal? (term δ_1) (term δ_2)))))]
+  [(eval-binop == (ptr (b_1 δ_1)) (pointer τ_1) undef (pointer τ_2)) (int 0)]
+  [(eval-binop == undef (pointer τ_1) (ptr (b_2 δ_2)) (pointer τ_2)) (int 0)]
+  [(eval-binop == undef (pointer τ_1) undef (pointer τ_2)) (int 1)]
+  [(eval-binop != (ptr (b_1 δ_1)) (pointer τ_1) (ptr (b_2 δ_2)) (pointer τ_2)) (int ,(boolean-to-int (not (and (equal? (term b_1) (term b_2)) (equal? (term δ_1) (term δ_2))))))]
+  [(eval-binop != (ptr (b_1 δ_1)) (pointer τ_1) undef (pointer τ_2)) (int 1)]
+  [(eval-binop != undef (pointer τ_1) (ptr (b_2 δ_2)) (pointer τ_2)) (int 1)]
+  [(eval-binop != undef (pointer τ_1) undef (pointer τ_2)) (int 0)]
   ; else
   [(eval-binop bop v_1 τ_1 v_2 τ_2) ,(raise-argument-error 'eval-binop "(int n) or (pointer τ)" (term (v_1 τ_1 v_2 τ_2)))])
 
