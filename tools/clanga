@@ -1,5 +1,0 @@
-#/bin/bash
-
-clang -O1 "$@" && ./a.out
-echo "exit code: $?"
-rm -f a.out

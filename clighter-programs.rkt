@@ -4,43 +4,8 @@
 (require "clighter.rkt")
 (require "utils.rkt")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+;; This file contains traces for various programs written in Clighter and their equivalents in Clight.
+;; The left-hand side contains the Clighter code, while the right-hand side comments provide the corresponding Clight code.
 
 ;;;;;;;;;;;;
 ;; TRACES ;;
@@ -61,40 +26,6 @@
                                   ]))                                                                  ; }
                        (return (count int))                                                            ; return count;
                        ]))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #| Maximum Array Element |#
 #;(traces run (term ((int max)                                                                           ; int max;
@@ -134,38 +65,6 @@
                                      skip)))
                        (return (max int))]))))                                                         ; return max;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #| Binary Search |#
 #;(traces run (term ((int lo)                                                                            ; int lo;
                    (int hi)                                                                            ; int hi;
@@ -204,46 +103,6 @@
                                           (= (hi int) ((- (mi int) (1 int)) int))                      ;     hi = mi - 1;
                                           (return (mi int))))]))                                       ;   else return mi;
                        (return (-1 int))]))))                                                          ; } return -1;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #| Removing Node from a Linked List |#
 (define NodeT (term (struct Node (val int) (next (pointer void)))))                                    ; typedef struct Node { int val; void* next; } NodeT;
@@ -286,42 +145,6 @@
                                   ]))                                                                  ; }
                        (return ((@ (dummy ,NodeT) next) (pointer void)))]))))                          ; return dummy.next;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;;;;;;;;;;;;;;;;;
 ;; DERIVATIONS ;;
 ;;;;;;;;;;;;;;;;;
@@ -334,37 +157,6 @@
                                             (return ((+ (aaa int) (bbb int)) int))))                   ; return aaa + bbb;
                                           ((int 9)                                                     ; // should return 9
                                            ((0 (0 (int 4))) (1 (0 (int 5))))))))                       ; // with mem block 0+0 is a, blk 1+0 is 5
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #| Collatz Conjecture |#
 #;(show-derivations (build-derivations (run ((int start)                                                 ; int start;
@@ -389,11 +181,3 @@
                                                ]))
                                           ((int 1)                                                     ; // should return 1
                                            ((0 (0 (int 1))) (1 (0 (int 1))))))))                       ; // with mem block 0+0 is start, 1+0 is count
-
-
-
-
-
-
-
-

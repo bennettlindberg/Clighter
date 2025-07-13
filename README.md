@@ -13,6 +13,14 @@ As part of COMP_SCI 424, a graduate-level Programming Languages course, I develo
 
 The goal of writing Clighter was to gain hands-on experience writing an operational semantics and using PLT Redex. More concretely, we sought to match the behavior of C with Clighter by transpiling the operational semantics for Clight to PLT Redex. Rigorous testing informally demonstrated that our implementation matches the expected C behavior for all our targeted scenarios, which included branching, loops, pointers, structs, and several other interesting C features.
 
+## Repository Structure
+
+This repository contains the following files:
+- `clighter.rkt`: The main file that defines the syntax and big-step reduction rules.
+- `clighter-tests.rkt`: A large test suite that tests the implementation of Clighter.
+- `clighter-programs.rkt`: A collection of example programs written in Clighter (with equivalent Clight code).
+- `docs/Background-Presentation.pdf`: A PDF presentation that provides background information on Clight.
+
 ## Implementation
 
 The `clighter.rkt` file defines the syntax and big-step reduction rules for Clighter.

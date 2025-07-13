@@ -1,14 +1,7 @@
 #lang racket
 
-(provide (all-defined-out))
 (require redex)
-
-; (define (parse-statement-sequence list-of-stmts parsed-nested-stmts)
-;   (if (empty? list-of-stmts)
-;       parsed-nested-stmts
-;       (parse-statement-sequence (rest list-of-stmts)
-;                                 (term (,parsed-nested-stmts
-;                                        ,(first list-of-stmts))))))
+(provide (all-defined-out))
 
 (define-syntax (stmts->seq+term stx)
   (syntax-case stx ()
@@ -21,4 +14,3 @@
   (syntax-case stx ()
     [(_ j)
      #'(with-handlers ([exn:fail? (λ (e) (void))]) (test-equal #f (judgment-holds j)))]))
-
